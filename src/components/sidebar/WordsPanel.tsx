@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../../state/store';
 import { WordEntry, uid, DIFFICULTY_LABELS } from '../../model/types';
 import { autoPlaceEntries, cloneProject, placementCells, removePlacement } from '../../logic/grid';
+import { startDrag, clearDrag } from '../../state/dnd';
 
 type Filter = 'kaikki' | 'sijoitettu' | 'sijoittamatta' | 'ristiriita' | 'pakolliset';
 type Sort = 'aakkoset' | 'pituus' | 'tila';
@@ -132,6 +133,10 @@ export default function WordsPanel() {
         </label>
       </div>
 
+      <div className="panel-hint subtle">
+        Vedä sana listasta suoraan ruudukkoon: vihreä esikatselu tarkoittaa, että sana sopii.
+        Pidä <strong>Shift</strong> pohjassa pudottaaksesi pystysuuntaan.
+      </div>
       <ul className="word-list" aria-label="Sanalista">
         {visible.map((e) => {
           const placed = placedIds.has(e.id);
@@ -140,8 +145,26 @@ export default function WordsPanel() {
           const statusCls = conflict ? 'st-conflict' : placed ? 'st-placed' : 'st-unplaced';
           const editing = editingId === e.id;
           return (
-            <li key={e.id} className={`word-item ${statusCls}`}>
-              <button className="word-main" onClick={() => selectOnGrid(e)} title={placed ? 'Näytä ruudukossa' : 'Sanaa ei ole vielä sijoitettu'}>
+            <li
+              key={e.id}
+              className={`word-item ${statusCls}`}
+              draggable
+              onDragStart={(ev) => {
+                ev.dataTransfer.setData('text/plain', e.answer);
+                ev.dataTransfer.effectAllowed = 'copy';
+                startDrag({ word: e });
+              }}
+              onDragEnd={clearDrag}
+            >
+              <button
+                className="word-main"
+                onClick={() => selectOnGrid(e)}
+                title={
+                  placed
+                    ? 'Näytä ruudukossa – tai vedä ruudukkoon siirtääksesi'
+                    : 'Vedä sana ruudukkoon sijoittaaksesi sen (Shift = pystysuunta)'
+                }
+              >
                 <span className="word-answer">
                   {e.answer} <span className="word-len">({e.answer.length})</span>
                   {e.required && <span className="word-required" title="Pakollinen sana">★</span>}

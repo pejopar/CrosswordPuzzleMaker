@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useStore } from '../../state/store';
 import { uid } from '../../model/types';
 import { cloneProject } from '../../logic/grid';
+import { startDrag, clearDrag } from '../../state/dnd';
 
 export default function ImagesPanel() {
   const { state, mutate, toast } = useStore();
@@ -56,8 +57,8 @@ export default function ImagesPanel() {
       </div>
 
       <div className="panel-hint subtle">
-        Vedä kuva ruudukon vihjealueelle liittääksesi sen. Prototyypin mallikuvat ovat alkuperäisiä
-        piirroskuvituksia.
+        Vedä kuva vihjealueelle liittääksesi sen – tai mihin tahansa vapaaseen ruutuun, jolloin
+        siihen luodaan uusi kuvavihjealue. Prototyypin mallikuvat ovat alkuperäisiä piirroskuvituksia.
       </div>
 
       {recent.length > 0 && (
@@ -129,7 +130,9 @@ function ImageThumb({ img, onAlt }: { img: { id: string; dataUrl: string; alt: s
       onDragStart={(e) => {
         e.dataTransfer.setData('ristikkostudio/image-id', img.id);
         e.dataTransfer.effectAllowed = 'copy';
+        startDrag({ imageId: img.id });
       }}
+      onDragEnd={clearDrag}
       onDoubleClick={onAlt}
     />
   );

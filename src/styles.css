@@ -964,6 +964,41 @@ textarea:focus-visible,
   outline: 2px dashed var(--ok);
 }
 
+.dnd-ghost {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  pointer-events: none;
+  z-index: 11;
+  border-radius: 4px;
+}
+
+.dnd-ghost.dnd-ok {
+  background: rgba(29, 158, 110, 0.28);
+  outline: 2px dashed var(--ok);
+  color: var(--ok);
+}
+
+.dnd-ghost.dnd-bad {
+  background: rgba(211, 39, 62, 0.24);
+  outline: 2px dashed var(--danger);
+  color: var(--danger);
+}
+
+.word-item[draggable='true'] {
+  cursor: grab;
+}
+
+.word-item[draggable='true']:active {
+  cursor: grabbing;
+}
+
+.tool-btn[draggable='true'] {
+  cursor: grab;
+}
+
 .sel-outline {
   position: absolute;
   outline: 3px solid #2151ff;

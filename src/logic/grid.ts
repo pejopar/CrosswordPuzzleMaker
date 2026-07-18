@@ -258,6 +258,11 @@ function tryFit(p: Project, word: string, r: number, c: number, dir: Dir): numbe
   return crossings;
 }
 
+/** Julkinen sovitustesti esim. raahaukselle: risteysten määrä tai -1 jos ei sovi. */
+export function fitWordAt(p: Project, word: string, r: number, c: number, dir: Dir): number {
+  return tryFit(p, word.toUpperCase(), r, c, dir);
+}
+
 /** Yksinkertainen automaattinen sijoittelija sijoittamattomille sanoille. */
 export function autoPlaceEntries(p: Project, entryIds: string[]): { project: Project; placed: string[]; failed: string[] } {
   let cur = cloneProject(p);
