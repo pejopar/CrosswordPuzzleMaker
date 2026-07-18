@@ -25,6 +25,9 @@ suositus käyttää tietokonetta.
   (Sisältö / Rakenne / Sanat ja vihjeet / Kuvat / Tyyli), keskellä tulostussivua jäljittelevä
   kanvaasi ja oikealla valinnan mukaan vaihtuva tarkastelupaneeli sekä alhaalla
   tarkistuspaneeli.
+- **Raahaa ja pudota**: vedä sanoja sanalistasta suoraan ruudukkoon (Shift = pystysuunta,
+  vihreä/punainen esikatselu näyttää sopivuuden), vedä kuvia vapaisiin ruutuihin uusiksi
+  kuvavihjealueiksi ja vedä vihje-, kuva-, este- ja koristetyökaluja ruudukkoon.
 - **Ruudukon muokkaus**: ruutujen valinta, aluevalinta vetämällä ja Shift-klikkauksella,
   kirjainten kirjoitus näppäimistöltä (myös Ä, Ö, Å), nuolinäppäinnavigointi,
   hiiren oikean napin kontekstivalikko, rivien ja sarakkeiden lisäys/poisto
