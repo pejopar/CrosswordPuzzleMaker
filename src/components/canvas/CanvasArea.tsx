@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../../state/store';
 import GridView from './GridView';
-import { cloneProject, removeRegion } from '../../logic/grid';
+import {
+  cloneProject,
+  movePlacement,
+  moveRegion,
+  placementAt,
+  removeRegion,
+  rotatePlacement,
+  rotateRegion,
+} from '../../logic/grid';
 
 const PAGE_PX: Record<string, { w: number; h: number }> = {
   A4: { w: 794, h: 1123 },
@@ -12,7 +20,7 @@ const PAGE_PX: Record<string, { w: number; h: number }> = {
 const ZOOM_STEPS = [0.4, 0.5, 0.65, 0.8, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2];
 
 export default function CanvasArea() {
-  const { state, mutate, ui } = useStore();
+  const { state, mutate, ui, toast } = useStore();
   const p = state.project;
   const { zoom, view, sel, selRect, selRegionId } = state.ui;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -49,10 +57,60 @@ export default function CanvasArea() {
         ui({ sel: { r: nr, c: nc }, selRegionId: p.cells[nr][nc].regionId ?? null, selRect: null });
       };
 
-      if (e.key === 'ArrowRight') { e.preventDefault(); move(0, 1); return; }
-      if (e.key === 'ArrowLeft') { e.preventDefault(); move(0, -1); return; }
-      if (e.key === 'ArrowDown') { e.preventDefault(); move(1, 0); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); move(-1, 0); return; }
+      // Siirtotyökalulla nuolinäppäimet siirtävät valittua elementtiä ruudun kerrallaan
+      const nudge = (dr: number, dc: number): boolean => {
+        if (state.ui.tool !== 'move') return false;
+        if (selRegionId) {
+          const rg = p.regions.find((x) => x.id === selRegionId);
+          if (!rg) return false;
+          const res = moveRegion(p, selRegionId, rg.r + dr, rg.c + dc);
+          if (res) {
+            mutate(() => res);
+            ui({ sel: { r: rg.r + dr, c: rg.c + dc } });
+          } else toast('Alue ei mahdu siihen suuntaan');
+          return true;
+        }
+        const pl = placementAt(p, r, c);
+        if (pl) {
+          const res = movePlacement(p, pl.id, pl.r + dr, pl.c + dc, pl.dir);
+          if (res) {
+            mutate(() => res);
+            ui({ sel: { r: r + dr, c: c + dc } });
+          } else toast('Sana ei sovi siihen suuntaan');
+          return true;
+        }
+        return false;
+      };
+
+      if (e.key === 'ArrowRight') { e.preventDefault(); if (!nudge(0, 1)) move(0, 1); return; }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); if (!nudge(0, -1)) move(0, -1); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (!nudge(1, 0)) move(1, 0); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); if (!nudge(-1, 0)) move(-1, 0); return; }
+
+      // R kääntää valitun alueen tai (siirtotyökalulla) sanan – ei varasteta
+      // kirjainta, kun kirjainruutuun ollaan kirjoittamassa
+      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (selRegionId) {
+          e.preventDefault();
+          const res = rotateRegion(p, selRegionId);
+          if (res) mutate(() => res);
+          else toast('Aluetta ei voi kääntää tässä – tilaa ei ole');
+          return;
+        }
+        if (state.ui.tool === 'move') {
+          const pl = placementAt(p, r, c);
+          if (pl) {
+            e.preventDefault();
+            const res = rotatePlacement(p, pl.id);
+            if (res) {
+              mutate(() => res);
+              ui({ dirPref: pl.dir === 'across' ? 'down' : 'across' });
+              toast('Sanan suunta käännetty');
+            } else toast('Sanaa ei voi kääntää tässä – risteykset eivät täsmää');
+            return;
+          }
+        }
+      }
       if (e.key === 'Tab') {
         e.preventDefault();
         ui({ dirPref: state.ui.dirPref === 'across' ? 'down' : 'across' });
@@ -114,7 +172,7 @@ export default function CanvasArea() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [view, sel, selRect, selRegionId, p, mutate, ui, state.ui.dirPref, state.ui.modal, state.ui.ctxMenu]);
+  }, [view, sel, selRect, selRegionId, p, mutate, ui, toast, state.ui.dirPref, state.ui.modal, state.ui.ctxMenu, state.ui.tool]);
 
   const setZoom = (z: number) => ui({ zoom: Math.max(0.3, Math.min(2.5, z)) });
   const zoomStep = (dir: 1 | -1) => {

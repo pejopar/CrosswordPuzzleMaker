@@ -4,6 +4,7 @@ import { createSampleProject } from '../model/sample';
 
 export type Tool =
   | 'select'
+  | 'move'
   | 'letter'
   | 'textClue'
   | 'imageClue'

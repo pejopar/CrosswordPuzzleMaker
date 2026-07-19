@@ -4,9 +4,14 @@ import { useStore, Rect } from '../../state/store';
 import {
   addCol,
   addRow,
+  canPlaceRegion,
   cloneProject,
   fitWordAt,
   makeCell,
+  moveRegion,
+  movePlacement,
+  placementAt,
+  placementCells,
   placeWord,
   regionAt,
   removePlacement,
@@ -34,6 +39,26 @@ function normRect(a: { r: number; c: number }, b: { r: number; c: number }): Rec
 
 const ARROW_ORDER = ['right', 'down', 'right-down', 'down-right'] as const;
 
+type MovingState =
+  | {
+      kind: 'region';
+      regionId: string;
+      offR: number;
+      offC: number;
+      w: number;
+      h: number;
+      transposed: boolean;
+      cur: { r: number; c: number };
+    }
+  | {
+      kind: 'word';
+      placementId: string;
+      word: string;
+      grabIndex: number;
+      dir: Dir;
+      cur: { r: number; c: number };
+    };
+
 export default function GridView({ project: p, mode, cellSize: S, interactive }: GridViewProps) {
   const { state, mutate, ui, toast } = useStore();
   const { tool, sel, selRect, selRegionId, aiPreview } = state.ui;
@@ -43,6 +68,11 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
   const [resizing, setResizing] = useState<{ regionId: string; startX: number; startY: number; w: number; h: number } | null>(null);
   const [hoverGrid, setHoverGrid] = useState(false);
   const [dndHover, setDndHover] = useState<{ r: number; c: number; dir: Dir } | null>(null);
+  const [moving, setMoving] = useState<MovingState | null>(null);
+  const movingRef = useRef<MovingState | null>(null);
+  movingRef.current = moving;
+  /** Projekti ilman siirrettävää sanaa – sopivuustarkistusta varten */
+  const moveTempRef = useRef<Project | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   // Raahauksen päättyessä (myös peruutettaessa) siivotaan esikatselu
@@ -214,6 +244,41 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
     if (!isEditor || e.button === 2) return;
     e.preventDefault();
     const rg = regionAt(p, r, c);
+    if (tool === 'move') {
+      if (rg) {
+        ui({ sel: { r, c }, selRegionId: rg.id, selRect: null });
+        setMoving({
+          kind: 'region',
+          regionId: rg.id,
+          offR: r - rg.r,
+          offC: c - rg.c,
+          w: rg.w,
+          h: rg.h,
+          transposed: false,
+          cur: { r, c },
+        });
+        return;
+      }
+      const pl = placementAt(p, r, c);
+      if (pl) {
+        const entry = p.entries.find((en) => en.id === pl.entryId);
+        if (entry) {
+          moveTempRef.current = removePlacement(p, pl.id);
+          ui({ sel: { r, c }, selRegionId: null, selRect: null, dirPref: pl.dir });
+          setMoving({
+            kind: 'word',
+            placementId: pl.id,
+            word: entry.answer.toUpperCase(),
+            grabIndex: pl.dir === 'across' ? c - pl.c : r - pl.r,
+            dir: pl.dir,
+            cur: { r, c },
+          });
+          return;
+        }
+      }
+      ui({ sel: { r, c }, selRegionId: null, selRect: null });
+      return;
+    }
     if (tool === 'select') {
       if (e.shiftKey && sel) {
         ui({ selRect: normRect(sel, { r, c }) });
@@ -259,6 +324,110 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
       setEditingRegion(rg.id);
     }
   }
+
+  /** Siirrettävän alueen kohderuutu (vasen yläkulma) tartuntapisteen mukaan. */
+  function regionTargetPos(m: Extract<MovingState, { kind: 'region' }>) {
+    const w = m.transposed ? m.h : m.w;
+    const h = m.transposed ? m.w : m.h;
+    const offR = Math.min(m.offR, h - 1);
+    const offC = Math.min(m.offC, w - 1);
+    return {
+      r: Math.max(0, Math.min(p.rows - h, m.cur.r - offR)),
+      c: Math.max(0, Math.min(p.cols - w, m.cur.c - offC)),
+      w,
+      h,
+    };
+  }
+
+  /** Siirrettävän sanan alkuruutu niin, että tartuttu kirjain pysyy kursorin alla. */
+  function wordTargetPos(m: Extract<MovingState, { kind: 'word' }>) {
+    const len = m.word.length;
+    const r =
+      m.dir === 'down'
+        ? Math.max(0, Math.min(p.rows - len, m.cur.r - m.grabIndex))
+        : m.cur.r;
+    const c =
+      m.dir === 'across'
+        ? Math.max(0, Math.min(p.cols - len, m.cur.c - m.grabIndex))
+        : m.cur.c;
+    return { r, c };
+  }
+
+  function commitMove(m: MovingState) {
+    if (m.kind === 'region') {
+      const t = regionTargetPos(m);
+      const rg = p.regions.find((x) => x.id === m.regionId);
+      if (!rg) return;
+      if (t.r === rg.r && t.c === rg.c && !m.transposed) return;
+      const res = moveRegion(p, m.regionId, t.r, t.c, m.transposed);
+      if (res) {
+        mutate(() => res);
+        ui({ sel: { r: t.r, c: t.c }, selRegionId: m.regionId, selRect: null });
+      } else {
+        toast('Alue ei mahdu tähän kohtaan – kokeile toista paikkaa');
+      }
+    } else {
+      const t = wordTargetPos(m);
+      const pl = p.placements.find((x) => x.id === m.placementId);
+      if (!pl) return;
+      if (t.r === pl.r && t.c === pl.c && m.dir === pl.dir) return;
+      const res = movePlacement(p, m.placementId, t.r, t.c, m.dir);
+      if (res) {
+        mutate(() => res);
+        ui({ sel: { r: t.r, c: t.c }, selRect: null, selRegionId: null, dirPref: m.dir });
+        toast('Sana siirretty – kumoa halutessasi (Ctrl+Z)');
+      } else {
+        toast('Sana ei sovi tähän kohtaan – risteyskirjaimet eivät täsmää');
+      }
+    }
+  }
+
+  // Siirtotyökalun raahaus: seurataan hiirtä, R kääntää, Esc peruu
+  useEffect(() => {
+    if (!moving) return;
+    const zoom = state.ui.zoom;
+    const cellFromEvent = (e: MouseEvent) => {
+      const rect = wrapRef.current?.getBoundingClientRect();
+      if (!rect) return null;
+      return {
+        r: Math.max(0, Math.min(p.rows - 1, Math.floor((e.clientY - rect.top) / (S * zoom)))),
+        c: Math.max(0, Math.min(p.cols - 1, Math.floor((e.clientX - rect.left) / (S * zoom)))),
+      };
+    };
+    const onMove = (e: MouseEvent) => {
+      const cur = cellFromEvent(e);
+      if (!cur) return;
+      setMoving((m) => (m && (m.cur.r !== cur.r || m.cur.c !== cur.c) ? { ...m, cur } : m));
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        setMoving((m) => {
+          if (!m) return m;
+          if (m.kind === 'region') return { ...m, transposed: !m.transposed };
+          return { ...m, dir: m.dir === 'across' ? 'down' : 'across', grabIndex: 0 };
+        });
+      } else if (e.key === 'Escape') {
+        moveTempRef.current = null;
+        setMoving(null);
+      }
+    };
+    const onUp = () => {
+      const m = movingRef.current;
+      if (m) commitMove(m);
+      moveTempRef.current = null;
+      setMoving(null);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('keydown', onKey);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!moving, p, S, state.ui.zoom]);
 
   // Raahaus ruudun päälle: sana, työkalu tai kuva
   function onCellDragOver(e: React.DragEvent, r: number, c: number) {
@@ -377,6 +546,12 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
     });
   }
 
+  const movingWordCells = new Set<string>();
+  if (moving?.kind === 'word') {
+    const pl = p.placements.find((x) => x.id === moving.placementId);
+    if (pl) for (const pc of placementCells(pl)) movingWordCells.add(`${pc.r},${pc.c}`);
+  }
+
   const dragRect = drag && tool !== 'select' ? normRect(drag.start, drag.cur) : null;
   const previewByCell = new Map<string, string>();
   if (aiPreview) for (const c of aiPreview.cells) previewByCell.set(`${c.r},${c.c}`, c.letter);
@@ -389,7 +564,7 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
   return (
     <div
       ref={wrapRef}
-      className={`grid-wrap ${isEditor ? 'editor' : 'static'}`}
+      className={`grid-wrap ${isEditor ? 'editor' : 'static'} tool-${tool}`}
       style={{ width: gridW, height: gridH, fontFamily }}
       onMouseEnter={() => setHoverGrid(true)}
       onMouseLeave={() => setHoverGrid(false)}
@@ -410,6 +585,7 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
           if (dragRect && r >= dragRect.r0 && r <= dragRect.r1 && c >= dragRect.c0 && c <= dragRect.c1)
             cls.push('cell-drag-target');
           if (cell.locked) cls.push('cell-locked');
+          if (movingWordCells.has(`${r},${c}`)) cls.push('cell-moving');
           if (mode !== 'editor' && cell.type === 'empty') cls.push('cell-invisible');
           const style: React.CSSProperties = {
             left: x,
@@ -461,7 +637,9 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
         return (
           <div
             key={rg.id}
-            className={`region region-${rg.kind} ${selected ? 'region-selected' : ''}`}
+            className={`region region-${rg.kind} ${selected ? 'region-selected' : ''} ${
+              moving?.kind === 'region' && moving.regionId === rg.id ? 'region-moving' : ''
+            }`}
             style={{
               left: x,
               top: y,
@@ -610,6 +788,41 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
           {dndState.tool === 'blocked' ? '■' : dndState.tool === 'text' ? '❝' : dndState.tool === 'decor' ? '✦' : '▣'}
         </div>
       )}
+
+      {/* Siirron esikatselu */}
+      {moving && isEditor && moving.kind === 'region' && (() => {
+        const t = regionTargetPos(moving);
+        const ok = canPlaceRegion(p, moving.regionId, t.r, t.c, t.w, t.h);
+        return (
+          <div
+            className={`dnd-ghost ${ok ? 'dnd-ok' : 'dnd-bad'}`}
+            style={{ left: t.c * S, top: t.r * S, width: t.w * S + lw, height: t.h * S + lw, fontSize: S * 0.4 }}
+            aria-hidden
+          >
+            ✥
+          </div>
+        );
+      })()}
+      {moving && isEditor && moving.kind === 'word' && (() => {
+        const t = wordTargetPos(moving);
+        const temp = moveTempRef.current;
+        const ok = temp ? fitWordAt(temp, moving.word, t.r, t.c, moving.dir) >= 0 : false;
+        return [...moving.word].map((ch, i) => {
+          const rr = moving.dir === 'down' ? t.r + i : t.r;
+          const cc = moving.dir === 'across' ? t.c + i : t.c;
+          if (rr >= p.rows || cc >= p.cols) return null;
+          return (
+            <div
+              key={`mv-${i}`}
+              className={`dnd-ghost ${ok ? 'dnd-ok' : 'dnd-bad'}`}
+              style={{ left: cc * S, top: rr * S, width: S + lw, height: S + lw, fontSize: S * 0.5 }}
+              aria-hidden
+            >
+              {ch}
+            </div>
+          );
+        });
+      })()}
 
       {/* Valitun ruudun korostus */}
       {sel && isEditor && !selRegionId && (

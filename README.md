@@ -28,6 +28,10 @@ suositus käyttää tietokonetta.
 - **Raahaa ja pudota**: vedä sanoja sanalistasta suoraan ruudukkoon (Shift = pystysuunta,
   vihreä/punainen esikatselu näyttää sopivuuden), vedä kuvia vapaisiin ruutuihin uusiksi
   kuvavihjealueiksi ja vedä vihje-, kuva-, este- ja koristetyökaluja ruudukkoon.
+- **Siirrä ja käännä**: Siirrä/käännä-työkalulla sanoja ja alueita voi raahata uuteen
+  paikkaan suoraan ruudukossa (vihreä/punainen esikatselu näyttää sopivuuden), R kääntää
+  sanan vaaka ↔ pysty tai alueen 90°, ja nuolinäppäimet siirtävät valittua elementtiä
+  ruudun kerrallaan. Käännöt ovat aina ruudukon suuntaisia – vinottaisia sanoja ei synny.
 - **Ruudukon muokkaus**: ruutujen valinta, aluevalinta vetämällä ja Shift-klikkauksella,
   kirjainten kirjoitus näppäimistöltä (myös Ä, Ö, Å), nuolinäppäinnavigointi,
   hiiren oikean napin kontekstivalikko, rivien ja sarakkeiden lisäys/poisto

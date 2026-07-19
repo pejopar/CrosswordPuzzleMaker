@@ -1,4 +1,4 @@
-import { Cell, Dir, Placement, Project, Region, Slot, WordEntry, makeCell, uid } from '../model/types';
+import { ArrowDir, Cell, Dir, Placement, Project, Region, Slot, WordEntry, makeCell, uid } from '../model/types';
 
 export { makeCell };
 
@@ -296,6 +296,93 @@ export function autoPlaceEntries(p: Project, entryIds: string[]): { project: Pro
     }
   }
   return { project: cur, placed, failed };
+}
+
+/** Mahtuuko alue kohtaan (r, c) koossa w × h? Omat nykyiset ruudut lasketaan vapaiksi. */
+export function canPlaceRegion(
+  p: Project,
+  regionId: string,
+  r: number,
+  c: number,
+  w: number,
+  h: number
+): boolean {
+  if (r < 0 || c < 0 || r + h > p.rows || c + w > p.cols) return false;
+  for (let rr = r; rr < r + h; rr++)
+    for (let cc = c; cc < c + w; cc++) {
+      const cell = p.cells[rr][cc];
+      if (cell.regionId && cell.regionId !== regionId) return false;
+      if (cell.type === 'letter' && cell.letter) return false;
+    }
+  return true;
+}
+
+const ARROW_TRANSPOSE: Record<ArrowDir, ArrowDir> = {
+  right: 'down',
+  down: 'right',
+  'right-down': 'down-right',
+  'down-right': 'right-down',
+};
+
+/** Siirtää alueen (ja halutessa kääntää sen 90°: w ↔ h). Palauttaa null jos ei mahdu. */
+export function moveRegion(
+  p: Project,
+  regionId: string,
+  r: number,
+  c: number,
+  transpose = false
+): Project | null {
+  const rg = p.regions.find((x) => x.id === regionId);
+  if (!rg) return null;
+  const w = transpose ? rg.h : rg.w;
+  const h = transpose ? rg.w : rg.h;
+  if (!canPlaceRegion(p, regionId, r, c, w, h)) return null;
+  const n = cloneProject(p);
+  const reg = n.regions.find((x) => x.id === regionId)!;
+  for (let rr = reg.r; rr < reg.r + reg.h; rr++)
+    for (let cc = reg.c; cc < reg.c + reg.w; cc++)
+      if (n.cells[rr]?.[cc]?.regionId === regionId) n.cells[rr][cc] = makeCell();
+  reg.r = r;
+  reg.c = c;
+  reg.w = w;
+  reg.h = h;
+  if (transpose && reg.arrow) {
+    const dir = ARROW_TRANSPOSE[reg.arrow.dir];
+    reg.arrow = { edge: dir.startsWith('down') ? 'bottom' : 'right', dir };
+  }
+  syncRegionCells(n);
+  return n;
+}
+
+/** Kääntää alueen paikallaan 90° (w ↔ h, nuoli kääntyy mukana). */
+export function rotateRegion(p: Project, regionId: string): Project | null {
+  const rg = p.regions.find((x) => x.id === regionId);
+  if (!rg) return null;
+  return moveRegion(p, regionId, rg.r, rg.c, true);
+}
+
+/** Siirtää sijoitetun sanan uuteen kohtaan/suuntaan. Palauttaa null jos ei sovi. */
+export function movePlacement(
+  p: Project,
+  placementId: string,
+  r: number,
+  c: number,
+  dir: Dir
+): Project | null {
+  const pl = p.placements.find((x) => x.id === placementId);
+  if (!pl) return null;
+  const entry = p.entries.find((e) => e.id === pl.entryId);
+  if (!entry) return null;
+  const temp = removePlacement(p, placementId);
+  if (fitWordAt(temp, entry.answer, r, c, dir) < 0) return null;
+  return placeWord(temp, entry, r, c, dir);
+}
+
+/** Kääntää sanan suunnan alkuruutunsa ympäri (vaaka ↔ pysty). */
+export function rotatePlacement(p: Project, placementId: string): Project | null {
+  const pl = p.placements.find((x) => x.id === placementId);
+  if (!pl) return null;
+  return movePlacement(p, placementId, pl.r, pl.c, pl.dir === 'across' ? 'down' : 'across');
 }
 
 export function clearGrid(p: Project): Project {

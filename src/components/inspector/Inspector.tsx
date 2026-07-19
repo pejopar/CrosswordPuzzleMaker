@@ -7,6 +7,8 @@ import {
   placeWord,
   removePlacement,
   removeRegion,
+  rotatePlacement,
+  rotateRegion,
 } from '../../logic/grid';
 import { generateClue, rewriteClue, suggestWords, suggestsImageClue } from '../../logic/ai';
 import { AiSuggestion, Dir, Region, uid, DIFFICULTY_LABELS } from '../../model/types';
@@ -167,6 +169,22 @@ function SlotInspector() {
 
       {placement && (
         <div className="btn-col">
+          <button
+            className="panel-btn"
+            title="Kääntää sanan vaakasuunnasta pystyyn tai päinvastoin alkuruudun ympäri (R)"
+            onClick={() => {
+              const res = rotatePlacement(p, placement.id);
+              if (res) {
+                mutate(() => res);
+                ui({ dirPref: placement.dir === 'across' ? 'down' : 'across' });
+                toast('Sanan suunta käännetty – kumoa halutessasi (Ctrl+Z)');
+              } else {
+                toast('Sanaa ei voi kääntää tässä – risteykset eivät täsmää');
+              }
+            }}
+          >
+            {placement.dir === 'across' ? 'Käännä pystyyn (R)' : 'Käännä vaakaan (R)'}
+          </button>
           <button
             className="panel-btn"
             onClick={() => {
@@ -418,6 +436,17 @@ function ClueInspector({ region }: { region: Region }) {
       )}
 
       <button
+        className="panel-btn"
+        title="Kääntää alueen 90° (leveys ja korkeus vaihtuvat, nuoli kääntyy mukana)"
+        onClick={() => {
+          const res = rotateRegion(p, region.id);
+          if (res) mutate(() => res);
+          else toast('Aluetta ei voi kääntää tässä – tilaa ei ole');
+        }}
+      >
+        Käännä alue (R)
+      </button>
+      <button
         className="panel-btn danger"
         onClick={() => {
           mutate((pr) => removeRegion(pr, region.id));
@@ -433,7 +462,7 @@ function ClueInspector({ region }: { region: Region }) {
 /* ---------- Kuva-alue ---------- */
 
 function ImageInspector({ region }: { region: Region }) {
-  const { state, mutate, ui } = useStore();
+  const { state, mutate, ui, toast } = useStore();
   const p = state.project;
   const img = region.imageId ? p.images.find((i) => i.id === region.imageId) : undefined;
 
@@ -531,6 +560,17 @@ function ImageInspector({ region }: { region: Region }) {
         </select>
       </label>
       <div className="btn-col">
+        <button
+          className="panel-btn"
+          title="Kääntää alueen 90° (leveys ja korkeus vaihtuvat, nuoli kääntyy mukana)"
+          onClick={() => {
+            const res = rotateRegion(p, region.id);
+            if (res) mutate(() => res);
+            else toast('Aluetta ei voi kääntää tässä – tilaa ei ole');
+          }}
+        >
+          Käännä alue (R)
+        </button>
         {img && (
           <button className="panel-btn" onClick={() => update({ imageId: undefined })}>
             Poista kuva alueesta

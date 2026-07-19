@@ -10,6 +10,7 @@ const DRAGGABLE_TOOLS: Partial<Record<Tool, DragTool>> = {
 
 const TOOLS: { id: Tool; label: string; icon: string; hint: string }[] = [
   { id: 'select', label: 'Valinta', icon: '➤', hint: 'Valitse ruutuja ja alueita (vedä valitaksesi useita)' },
+  { id: 'move', label: 'Siirrä / käännä', icon: '✥', hint: 'Vedä sanaa tai aluetta siirtääksesi sen – paina R kääntääksesi, nuolinäppäimet siirtävät ruudun kerrallaan' },
   { id: 'letter', label: 'Kirjainruudut', icon: 'A', hint: 'Maalaa kirjainruutuja vastauksille' },
   { id: 'textClue', label: 'Tekstivihje', icon: '❝', hint: 'Piirrä vihjealue – voi kattaa useita ruutuja' },
   { id: 'imageClue', label: 'Kuvavihje', icon: '▣', hint: 'Piirrä kuvavihjealue' },

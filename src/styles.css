@@ -1018,6 +1018,25 @@ textarea:focus-visible,
   justify-content: center;
   overflow: visible;
   z-index: 2;
+  transition: left 0.14s ease, top 0.14s ease, width 0.14s ease, height 0.14s ease;
+}
+
+.region-moving {
+  opacity: 0.35;
+}
+
+.cell-moving {
+  opacity: 0.35;
+}
+
+.grid-wrap.tool-move .cell,
+.grid-wrap.tool-move .region {
+  cursor: grab;
+}
+
+.grid-wrap.tool-move .cell:active,
+.grid-wrap.tool-move .region:active {
+  cursor: grabbing;
 }
 
 .region-text {
