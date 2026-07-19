@@ -101,6 +101,14 @@ export default function Toolbar() {
         <button className="tb-btn icon" onClick={redo} disabled={!state.future.length} title="Tee uudelleen (Ctrl+Y)" aria-label="Tee uudelleen">
           ↻
         </button>
+        <button
+          className="tb-btn dir-toggle"
+          onClick={() => ui({ dirPref: state.ui.dirPref === 'across' ? 'down' : 'across' })}
+          title="Kirjoitussuunta – vaihda myös Tab-näppäimellä tai napsauttamalla valittua ruutua uudelleen"
+          aria-label={`Kirjoitussuunta: ${state.ui.dirPref === 'across' ? 'vaakaan' : 'alas'}`}
+        >
+          {state.ui.dirPref === 'across' ? 'Suunta →' : 'Suunta ↓'}
+        </button>
       </div>
 
       <div className="toolbar-group grid-size">

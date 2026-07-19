@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../state/store';
 import { createBlankProject, createSampleProject } from '../../model/sample';
 import { parseWordList, rowsToEntries, ParsedRow } from '../../logic/importer';
-import { autoPlaceEntries } from '../../logic/grid';
+import { generateLayout } from '../../logic/grid';
 import { buildSvg, exportPng, exportProjectFile, exportSvg, parseProjectFile } from '../../logic/exporter';
 import { requestPrint } from '../PrintSheet';
 import { suggestWords } from '../../logic/ai';
@@ -359,13 +359,10 @@ function AutofillModal() {
 
   const finish = () => {
     if (mode === 'rakenne') {
-      const res = autoPlaceEntries(
-        { ...p, cells: p.cells.map((row) => row.map(() => ({ type: 'empty' as const, letter: '' }))), regions: [], placements: [] },
-        p.entries.map((e) => e.id)
-      );
+      const res = generateLayout(p, p.entries.map((e) => e.id));
       setProposals(null);
       setSummary([
-        `${res.placed.length} sanaa sijoitettu uuteen rakenteeseen`,
+        `${res.placed} sanaa sijoitettu uuteen rakenteeseen vihjeruutuineen`,
         ...(res.failed.length ? [`${res.failed.length} sanaa ei mahtunut: ${res.failed.map((id) => p.entries.find((e) => e.id === id)?.answer).join(', ')}`] : []),
         'Hyväksy muutokset alta – mitään ei ole vielä muutettu.',
       ]);
@@ -424,15 +421,7 @@ function AutofillModal() {
 
   const apply = () => {
     if (mode === 'rakenne') {
-      mutate((pr) => {
-        const cleared = {
-          ...pr,
-          cells: pr.cells.map((row) => row.map(() => ({ type: 'empty' as const, letter: '' }))),
-          regions: [],
-          placements: [],
-        };
-        return autoPlaceEntries(cleared, pr.entries.map((e) => e.id)).project;
-      });
+      mutate((pr) => generateLayout(pr, pr.entries.map((e) => e.id)).project);
     } else if (proposals) {
       mutate((pr) => {
         let cur = pr;

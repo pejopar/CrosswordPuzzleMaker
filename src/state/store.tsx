@@ -40,6 +40,8 @@ export type ModalKind =
 export interface AiPreview {
   cells: { r: number; c: number; letter: string }[];
   label: string;
+  /** Enterillä hyväksyttävä sanaehdotus (kirjoituksen ennakointi) */
+  apply?: { word: string; r: number; c: number; dir: Dir };
 }
 
 export interface UIState {
@@ -49,6 +51,8 @@ export interface UIState {
   selRect: Rect | null;
   selRegionId: string | null;
   dirPref: Dir;
+  /** Ehdota sanaa kirjoitettaessa (ghost-esikatselu, Enter hyväksyy) */
+  autoSuggest: boolean;
   zoom: number;
   view: ViewMode;
   modal: ModalKind | null;
@@ -157,6 +161,7 @@ const initialState = (): AppState => ({
     selRect: null,
     selRegionId: null,
     dirPref: 'across',
+    autoSuggest: true,
     zoom: 1,
     view: 'editor',
     modal: null,

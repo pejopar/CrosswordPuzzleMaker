@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../../state/store';
 import { WordEntry, uid, DIFFICULTY_LABELS } from '../../model/types';
-import { autoPlaceEntries, cloneProject, placementCells, removePlacement } from '../../logic/grid';
+import { autoPlaceEntries, cloneProject, generateLayout, placementCells, removePlacement } from '../../logic/grid';
 import { startDrag, clearDrag } from '../../state/dnd';
 
 type Filter = 'kaikki' | 'sijoitettu' | 'sijoittamatta' | 'ristiriita' | 'pakolliset';
@@ -238,7 +238,37 @@ export default function WordsPanel() {
           Liitä lista / Tuo CSV
         </button>
         <button
+          className="panel-btn primary"
+          title="Tyhjentää ruudukon ja rakentaa kokonaisen ristikon sanalistasta: sanat risteyksineen, vihjeruudut nuolineen ja estetyt ruudut"
+          onClick={() => {
+            if (!p.entries.length) return toast('Lisää ensin sanoja listaan');
+            ui({
+              modal: {
+                kind: 'confirm',
+                title: 'Luo ristikko sanalistasta',
+                message:
+                  'Nykyinen ruudukko korvataan: sanat sijoitellaan risteyksineen ja vihjeruudut luodaan automaattisesti. Vihjetekstit tulevat sanalistasta. Voit kumota toiminnon (Ctrl+Z).',
+                confirmLabel: 'Luo ristikko',
+                onConfirm: () => {
+                  const res = generateLayout(p, p.entries.map((e) => e.id));
+                  const placed = res.placed;
+                  const failed = res.failed.map((id) => p.entries.find((e) => e.id === id)?.answer ?? '?');
+                  mutate(() => res.project);
+                  toast(
+                    failed.length
+                      ? `${placed} sanaa sijoitettu – eivät mahtuneet: ${failed.join(', ')}`
+                      : `Valmis! ${placed} sanaa sijoitettu vihjeruutuineen`
+                  );
+                },
+              },
+            });
+          }}
+        >
+          Luo ristikko sanalistasta
+        </button>
+        <button
           className="panel-btn"
+          title="Sijoittaa vain vielä sijoittamattomat sanat nykyiseen ruudukkoon"
           onClick={() => {
             const unplaced = p.entries.filter((e) => !placedIds.has(e.id)).map((e) => e.id);
             if (!unplaced.length) return toast('Kaikki sanat on jo sijoitettu');
@@ -246,7 +276,7 @@ export default function WordsPanel() {
             toast('Sijoittamattomat sanat sijoiteltiin – tarkista tulos ja kumoa tarvittaessa');
           }}
         >
-          Luo alustava asettelu
+          Sijoita puuttuvat sanat
         </button>
       </div>
     </div>

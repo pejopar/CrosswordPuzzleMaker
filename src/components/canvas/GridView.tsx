@@ -6,6 +6,7 @@ import {
   addRow,
   canPlaceRegion,
   cloneProject,
+  findSlot,
   fitWordAt,
   makeCell,
   moveRegion,
@@ -546,6 +547,19 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
     });
   }
 
+  // Kirjoitussuunnan mukainen sanajono korostetaan kevyesti
+  const slotCells = new Set<string>();
+  if (isEditor && sel && !selRegionId && (tool === 'select' || tool === 'letter' || tool === 'move')) {
+    const slot = findSlot(p, sel.r, sel.c, state.ui.dirPref);
+    if (slot) {
+      for (let i = 0; i < slot.length; i++) {
+        slotCells.add(
+          slot.dir === 'across' ? `${slot.r},${slot.c + i}` : `${slot.r + i},${slot.c}`
+        );
+      }
+    }
+  }
+
   const movingWordCells = new Set<string>();
   if (moving?.kind === 'word') {
     const pl = p.placements.find((x) => x.id === moving.placementId);
@@ -586,6 +600,7 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
             cls.push('cell-drag-target');
           if (cell.locked) cls.push('cell-locked');
           if (movingWordCells.has(`${r},${c}`)) cls.push('cell-moving');
+          if (slotCells.has(`${r},${c}`) && !isSel) cls.push('cell-in-slot');
           if (mode !== 'editor' && cell.type === 'empty') cls.push('cell-invisible');
           const style: React.CSSProperties = {
             left: x,
@@ -830,7 +845,13 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
           className="sel-outline"
           style={{ left: sel.c * S, top: sel.r * S, width: S + lw, height: S + lw }}
           aria-hidden
-        />
+        >
+          {p.cells[sel.r]?.[sel.c]?.type === 'letter' && (
+            <span className="dir-badge" title="Kirjoitussuunta">
+              {state.ui.dirPref === 'across' ? '→' : '↓'}
+            </span>
+          )}
+        </div>
       )}
 
       {/* Plus-painikkeet reunoilla */}

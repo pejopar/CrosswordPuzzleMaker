@@ -2,8 +2,8 @@ import { useStore } from '../../state/store';
 import {
   addCol,
   addRow,
-  autoPlaceEntries,
   clearGrid,
+  generateLayout,
   colHasContent,
   deleteCol,
   deleteRow,
@@ -109,13 +109,9 @@ export default function StructurePanel() {
           onClick={() =>
             confirmed(
               'Luo rakenne uudelleen',
-              'Nykyinen ruudukko tyhjennetään ja sanat sijoitellaan uudelleen automaattisesti. Voit kumota toiminnon.',
+              'Nykyinen ruudukko tyhjennetään, sanat sijoitellaan uudelleen ja vihjeruudut luodaan automaattisesti. Voit kumota toiminnon.',
               () => {
-                mutate((pr) => {
-                  const cleared = clearGrid(pr);
-                  const res = autoPlaceEntries(cleared, cleared.entries.map((e) => e.id));
-                  return res.project;
-                });
+                mutate((pr) => generateLayout(pr, pr.entries.map((e) => e.id)).project);
                 toast('Rakenne luotiin uudelleen sanalistasta');
               }
             )

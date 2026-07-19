@@ -54,6 +54,14 @@ export default function ContentTools() {
         <strong>Vinkki:</strong>{' '}
         {TOOLS.find((t) => t.id === state.ui.tool)?.hint}
       </div>
+      <label className="field check">
+        <input
+          type="checkbox"
+          checked={state.ui.autoSuggest}
+          onChange={(e) => ui({ autoSuggest: e.target.checked, aiPreview: null })}
+        />
+        <span>Ehdota sanaa kirjoittaessa (Enter hyväksyy)</span>
+      </label>
       <div className="panel-hint subtle">
         Vastaukset kulkevat aina oikealle tai alas – ristikkoon ei voi syntyä vinottaisia sanoja.
       </div>

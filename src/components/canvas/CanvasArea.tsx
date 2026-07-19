@@ -3,13 +3,17 @@ import { useStore } from '../../state/store';
 import GridView from './GridView';
 import {
   cloneProject,
+  findSlot,
   movePlacement,
   moveRegion,
   placementAt,
+  placeWord,
   removeRegion,
   rotatePlacement,
   rotateRegion,
 } from '../../logic/grid';
+import { suggestFitting } from '../../logic/ai';
+import { uid } from '../../model/types';
 
 const PAGE_PX: Record<string, { w: number; h: number }> = {
   A4: { w: 794, h: 1123 },
@@ -117,6 +121,32 @@ export default function CanvasArea() {
         return;
       }
 
+      // Enter hyväksyy kirjoituksen ennakoivan sanaehdotuksen
+      if (e.key === 'Enter' && state.ui.aiPreview?.apply) {
+        e.preventDefault();
+        const a = state.ui.aiPreview.apply;
+        mutate((pr) =>
+          placeWord(
+            pr,
+            {
+              id: uid('e'),
+              answer: a.word,
+              clue: '',
+              difficulty: 2,
+              priority: 2,
+              required: false,
+              notes: 'Pikaehdotus',
+            },
+            a.r,
+            a.c,
+            a.dir
+          )
+        );
+        ui({ aiPreview: null });
+        toast(`${a.word} sijoitettu – kirjoita vihje Sanat ja vihjeet -paneelissa`);
+        return;
+      }
+
       if (/^[a-zåäö]$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         const letter = e.key.toUpperCase();
@@ -127,12 +157,49 @@ export default function CanvasArea() {
           n.cells[r][c] = { ...cell, type: 'letter', letter, regionId: undefined };
           return n;
         });
+        // Ennakoiva sanaehdotus: etsi kuvioon sopiva sana ja näytä se ghostina
+        if (state.ui.autoSuggest) {
+          const slot = findSlot(p, r, c, state.ui.dirPref);
+          if (slot) {
+            const idx = state.ui.dirPref === 'across' ? c - slot.c : r - slot.r;
+            const pattern = slot.pattern.slice(0, idx) + letter + slot.pattern.slice(idx + 1);
+            if (pattern.includes('_')) {
+              const { suggestions } = suggestFitting(pattern, {
+                theme: p.theme,
+                exclude: p.entries.map((en) => en.answer),
+                limit: 1,
+              });
+              const top = suggestions[0];
+              if (top) {
+                const cells = [...top.word]
+                  .map((ch, i) => ({
+                    r: slot.dir === 'down' ? slot.r + i : slot.r,
+                    c: slot.dir === 'across' ? slot.c + i : slot.c,
+                    letter: ch,
+                    blank: pattern[i] === '_',
+                  }))
+                  .filter((x) => x.blank);
+                ui({
+                  aiPreview: {
+                    cells,
+                    label: top.word,
+                    apply: { word: top.word, r: slot.r, c: slot.c, dir: slot.dir },
+                  },
+                });
+              } else {
+                ui({ aiPreview: null });
+              }
+            } else {
+              ui({ aiPreview: null });
+            }
+          }
+        }
         if (state.ui.dirPref === 'across') move(0, 1);
         else move(1, 0);
         return;
       }
 
-      if (e.key === 'Backspace') {
+      if (e.key === 'Backspace' && !selRect) {
         e.preventDefault();
         mutate((pr) => {
           const n = cloneProject(pr);
@@ -140,13 +207,16 @@ export default function CanvasArea() {
           if (cell.type === 'letter' && !cell.locked) n.cells[r][c] = { ...cell, letter: '' };
           return n;
         });
+        ui({ aiPreview: null });
         if (state.ui.dirPref === 'across') move(0, -1);
         else move(-1, 0);
         return;
       }
 
-      if (e.key === 'Delete') {
+      // Delete ja Backspace tyhjentävät korostetun valinnan
+      if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
+        ui({ aiPreview: null });
         if (selRegionId) {
           mutate((pr) => removeRegion(pr, selRegionId));
           ui({ selRegionId: null });
@@ -172,7 +242,7 @@ export default function CanvasArea() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [view, sel, selRect, selRegionId, p, mutate, ui, toast, state.ui.dirPref, state.ui.modal, state.ui.ctxMenu, state.ui.tool]);
+  }, [view, sel, selRect, selRegionId, p, mutate, ui, toast, state.ui.dirPref, state.ui.modal, state.ui.ctxMenu, state.ui.tool, state.ui.autoSuggest, state.ui.aiPreview]);
 
   const setZoom = (z: number) => ui({ zoom: Math.max(0.3, Math.min(2.5, z)) });
   const zoomStep = (dir: 1 | -1) => {

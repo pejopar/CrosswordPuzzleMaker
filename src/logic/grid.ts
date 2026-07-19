@@ -385,6 +385,68 @@ export function rotatePlacement(p: Project, placementId: string): Project | null
   return movePlacement(p, placementId, pl.r, pl.c, pl.dir === 'across' ? 'down' : 'across');
 }
 
+/**
+ * Luo kokonaisen suomalaistyylisen ristikon sanalistasta: tyhjentää ruudukon,
+ * sijoittaa sanat risteyksin, luo vihjeruudut nuolineen (teksti- tai kuvavihje)
+ * ja merkitsee käyttämättömät ruudut estetyiksi. Vihjetekstit tulevat
+ * sanalistasta – ne voi kirjoittaa käsin ennen tai jälkeen generoinnin.
+ */
+export function generateLayout(
+  p: Project,
+  entryIds: string[]
+): { project: Project; placed: number; failed: string[] } {
+  const cleared = clearGrid(p);
+  const res = autoPlaceEntries(cleared, entryIds);
+  const n = res.project;
+
+  for (const pl of n.placements) {
+    const entry = n.entries.find((e) => e.id === pl.entryId);
+    if (!entry) continue;
+    // Ensisijainen vihjepaikka: sanan edessä. Varapaikka: alkuruudun toisella
+    // sivulla kääntyvällä nuolella (esim. vihje yläpuolella, vastaus alkaa
+    // alta ja jatkuu oikealle).
+    const spots: { r: number; c: number; arrow: Region['arrow'] }[] =
+      pl.dir === 'across'
+        ? [
+            { r: pl.r, c: pl.c - 1, arrow: { edge: 'right', dir: 'right' } },
+            { r: pl.r - 1, c: pl.c, arrow: { edge: 'bottom', dir: 'down-right' } },
+          ]
+        : [
+            { r: pl.r - 1, c: pl.c, arrow: { edge: 'bottom', dir: 'down' } },
+            { r: pl.r, c: pl.c - 1, arrow: { edge: 'right', dir: 'right-down' } },
+          ];
+    for (const s of spots) {
+      if (!inBounds(n, s.r, s.c)) continue;
+      const cell = n.cells[s.r][s.c];
+      if (cell.regionId || (cell.type !== 'empty' && cell.type !== 'blocked')) continue;
+      const regId = uid('reg');
+      const isImage = !!entry.imageId;
+      n.regions.push({
+        id: regId,
+        kind: isImage ? 'image' : 'text',
+        r: s.r,
+        c: s.c,
+        w: 1,
+        h: 1,
+        text: isImage ? undefined : entry.clue,
+        imageId: entry.imageId,
+        fit: isImage ? 'cover' : undefined,
+        entryId: entry.id,
+        arrow: s.arrow,
+      });
+      n.cells[s.r][s.c] = { type: isImage ? 'image' : 'clue', letter: '', regionId: regId };
+      break;
+    }
+  }
+
+  // Käyttämättömät ruudut estetyiksi, jotta tulos näyttää valmiilta ristikolta
+  for (let r = 0; r < n.rows; r++)
+    for (let c = 0; c < n.cols; c++)
+      if (n.cells[r][c].type === 'empty') n.cells[r][c] = { type: 'blocked', letter: '' };
+
+  return { project: n, placed: res.placed.length, failed: res.failed };
+}
+
 export function clearGrid(p: Project): Project {
   const n = cloneProject(p);
   n.cells = n.cells.map((row) => row.map(() => makeCell()));
