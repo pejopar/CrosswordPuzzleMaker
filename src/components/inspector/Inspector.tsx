@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../state/store';
 import {
   cloneProject,
@@ -10,7 +10,14 @@ import {
   rotatePlacement,
   rotateRegion,
 } from '../../logic/grid';
-import { generateClue, rewriteClue, suggestWords, suggestsImageClue } from '../../logic/ai';
+import {
+  ensureWordlist,
+  generateClue,
+  isWordlistReady,
+  rewriteClue,
+  suggestFitting,
+  suggestsImageClue,
+} from '../../logic/ai';
 import { AiSuggestion, Dir, Region, uid, DIFFICULTY_LABELS } from '../../model/types';
 
 export default function Inspector() {
@@ -51,6 +58,15 @@ function SlotInspector() {
   const sel = state.ui.sel!;
   const dir = state.ui.dirPref;
   const [seed, setSeed] = useState(0);
+  const [wordsReady, setWordsReady] = useState(isWordlistReady());
+
+  useEffect(() => {
+    let alive = true;
+    ensureWordlist().then(() => alive && setWordsReady(true));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const slot = useMemo(
     () => findSlot(p, sel.r, sel.c, dir) ?? findSlot(p, sel.r, sel.c, dir === 'across' ? 'down' : 'across'),
@@ -72,15 +88,16 @@ function SlotInspector() {
     return n;
   }, [p, slot]);
 
-  const suggestions = useMemo(() => {
-    if (!slot) return [];
-    return suggestWords(slot.pattern, {
+  const { suggestions, total } = useMemo(() => {
+    if (!slot) return { suggestions: [], total: 0 };
+    return suggestFitting(slot.pattern, {
       theme: p.theme,
       difficulty: p.difficulty,
       exclude: p.entries.map((e) => e.answer),
       seed,
+      limit: 6,
     });
-  }, [slot, p, seed]);
+  }, [slot, p, seed, wordsReady]);
 
   if (!slot) {
     return (
@@ -221,11 +238,21 @@ function SlotInspector() {
         </div>
       )}
 
-      <h3 className="panel-sub">Tekoälyehdotukset</h3>
+      <h3 className="panel-sub">Sanaehdotukset</h3>
       {slot.pattern.includes('_') || !entry ? (
         <>
-          {suggestions.length === 0 && (
-            <div className="panel-hint subtle">Ei sopivia ehdotuksia tälle kuviolle. Kokeile muuttaa risteyskirjaimia.</div>
+          {!wordsReady && (
+            <div className="panel-hint subtle">Ladataan suomen sanastoa…</div>
+          )}
+          {wordsReady && (
+            <div className="panel-hint subtle">
+              {total > 0
+                ? `${total.toLocaleString('fi')} sanaston sanaa sopii kuvioon ${[...slot.pattern].join(' ')}`
+                : 'Sanastosta ei löydy kuvioon sopivaa sanaa. Kokeile muuttaa risteyskirjaimia.'}
+            </div>
+          )}
+          {suggestions.length === 0 && !wordsReady && (
+            <div className="panel-hint subtle">Ei sopivia ehdotuksia tälle kuviolle.</div>
           )}
           <ul className="suggestion-list">
             {suggestions.map((s) => (

@@ -1,8 +1,13 @@
-// Tekoälyavustimen mock-toteutus.
-// Rajapinta on eriytetty niin, että oikean AI-palvelun voi kytkeä tilalle
-// (esim. korvaamalla nämä funktiot API-kutsuilla) muuttamatta editoria.
+// Tekoälyavustin. Sanaehdotukset perustuvat oikeaan suomenkieliseen
+// sanastoon (ks. wordlist.ts) – risteyskirjaimet toimivat rajoitteina,
+// joten ehdotukset sopivat aina ruudukkoon. Vihjegeneraattori on yhä
+// mock-toteutus, jonka tilalle voi kytkeä oikean AI-palvelun (esim.
+// Claude API) muuttamatta editoria.
 
 import { AiSuggestion, Difficulty, uid } from '../model/types';
+import { findMatches, isWordlistReady } from './wordlist';
+
+export { ensureWordlist, isWordlistReady } from './wordlist';
 
 /** Mock-sanasto: luonnollista, nykyaikaista suomen kieltä. */
 const MOCK_WORDS: { word: string; common: number; theme: string[]; difficulty: Difficulty }[] = [
@@ -76,34 +81,83 @@ const REASONS = [
   'Ratkojaystävällinen sana, jolla hyvät risteysmahdollisuudet.',
 ];
 
+/** Teemaan sopivien sanojen hakemisto nopeaa teemapisteytystä varten. */
+const THEME_WORDS = new Map(MOCK_WORDS.map((m) => [m.word, m.theme]));
+
+export interface SuggestResult {
+  suggestions: AiSuggestion[];
+  /** Kuvioon sopivien sanojen kokonaismäärä sanastossa */
+  total: number;
+}
+
+/**
+ * Ehdottaa kuvioon sopivia suomen sanoja. Risteyskirjaimet (muut kuin _)
+ * toimivat rajoitteina, joten jokainen ehdotus sopii ruudukkoon sellaisenaan.
+ */
+export function suggestFitting(
+  pattern: string,
+  opts: { theme?: string; difficulty?: Difficulty; exclude?: string[]; seed?: number; limit?: number } = {}
+): SuggestResult {
+  const excl = new Set((opts.exclude ?? []).map((w) => w.toUpperCase()));
+  const themeKey = (opts.theme ?? '').toLowerCase();
+  const seed = opts.seed ?? 0;
+  const limit = opts.limit ?? 6;
+  const known = pattern.replace(/_/g, '').length;
+
+  if (!isWordlistReady()) {
+    // Sanasto latautuu vielä – käytetään suppeaa varasanastoa
+    const hits = MOCK_WORDS.filter((m) => matchesPattern(m.word, pattern) && !excl.has(m.word));
+    const rot = hits.length ? seed % hits.length : 0;
+    const rotated = [...hits.slice(rot), ...hits.slice(0, rot)];
+    return {
+      total: hits.length,
+      suggestions: rotated.slice(0, limit).map((m, i) => ({
+        id: uid('sug'),
+        word: m.word,
+        fit: Math.min(100, 60 + known * 8),
+        common: m.common,
+        themeFit: m.theme.some((t) => themeKey.includes(t)) ? 88 : 50,
+        difficulty: m.difficulty,
+        reason: REASONS[(i + seed) % REASONS.length],
+      })),
+    };
+  }
+
+  const { matches, total } = findMatches(pattern, {
+    exclude: excl,
+    limit,
+    offset: seed * limit,
+  });
+  return {
+    total,
+    suggestions: matches.map((dw, i) => {
+      const themes = THEME_WORDS.get(dw.word);
+      const themeFit = themes && themes.some((t) => themeKey.includes(t)) ? 90 : dw.common > 70 ? 55 : 40;
+      const difficulty: Difficulty = dw.common > 72 ? 1 : dw.common > 45 ? 2 : 3;
+      return {
+        id: uid('sug'),
+        word: dw.word,
+        fit: Math.min(100, 62 + known * 8 + (dw.common > 70 ? 8 : 0)),
+        common: dw.common,
+        themeFit,
+        difficulty,
+        reason:
+          dw.common > 72
+            ? 'Yleinen nykysuomen sana – helppo ratkojalle.'
+            : dw.common > 45
+              ? REASONS[(i + seed) % REASONS.length]
+              : 'Harvinaisempi sana – sopii vaikeampaan ristikkoon.',
+      } satisfies AiSuggestion;
+    }),
+  };
+}
+
+/** Yhteensopivuuskääre vanhalle kutsutavalle (mm. automaattitäyttö). */
 export function suggestWords(
   pattern: string,
   opts: { theme?: string; difficulty?: Difficulty; exclude?: string[]; seed?: number } = {}
 ): AiSuggestion[] {
-  const excl = new Set((opts.exclude ?? []).map((w) => w.toUpperCase()));
-  const themeKey = (opts.theme ?? '').toLowerCase();
-  const seed = opts.seed ?? 0;
-  const hits = MOCK_WORDS.filter(
-    (m) => matchesPattern(m.word, pattern) && !excl.has(m.word)
-  );
-  const scored = hits.map((m, i) => {
-    const themeFit = m.theme.some((t) => themeKey.includes(t)) ? 85 + (i % 10) : 45 + (i % 20);
-    const known = pattern.replace(/_/g, '').length;
-    const fit = Math.min(100, 60 + known * 8 + (m.common > 80 ? 10 : 0));
-    return {
-      id: uid('sug'),
-      word: m.word,
-      fit,
-      common: m.common,
-      themeFit,
-      difficulty: m.difficulty,
-      reason: REASONS[(i + seed) % REASONS.length],
-    } satisfies AiSuggestion;
-  });
-  scored.sort((a, b) => b.fit + b.themeFit / 2 - (a.fit + a.themeFit / 2));
-  // "Kokeile toista" kierrättää listaa
-  const rot = seed % Math.max(1, scored.length);
-  return [...scored.slice(rot), ...scored.slice(0, rot)].slice(0, 4);
+  return suggestFitting(pattern, { ...opts, limit: 4 }).suggestions;
 }
 
 /** Mock-vihjegeneraattori */

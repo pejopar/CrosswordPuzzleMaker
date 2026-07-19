@@ -8,6 +8,7 @@ import BottomPanel from './components/BottomPanel';
 import Modals from './components/modals/Modals';
 import ContextMenu from './components/ContextMenu';
 import PrintSheet from './components/PrintSheet';
+import { ensureWordlist } from './logic/ai';
 
 function useIsDesktop(): boolean {
   const [ok, setOk] = useState(() => window.innerWidth >= 1024);
@@ -22,6 +23,11 @@ function useIsDesktop(): boolean {
 export default function App() {
   const { state, ui, undo, redo } = useStore();
   const isDesktop = useIsDesktop();
+
+  // Lämmitetään sanasto taustalla, jotta ehdotukset ovat heti käytettävissä
+  useEffect(() => {
+    ensureWordlist();
+  }, []);
 
   // Yleiset pikanäppäimet
   useEffect(() => {

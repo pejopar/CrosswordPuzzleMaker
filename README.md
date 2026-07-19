@@ -41,10 +41,15 @@ suositus käyttää tietokonetta.
   sarakkeiden valinta ja tuonnin esikatselu kaksoiskappaleiden korostuksella.
 - **Kuvat**: kuvien lataus (JPEG/PNG/WebP), raahaus vihjealueille, sovitus/rajaus,
   zoomaus, alt-tekstit, viimeksi käytetyt. Mallikuvat ovat alkuperäisiä piirroskuvituksia.
-- **Tekoälyavustin (mock)**: sanaehdotukset risteyskirjainten ja pituuden perusteella,
-  vihjeiden generointi ja muokkaus (helpompi/vaikeampi/lyhyempi/hauskempi),
-  automaattitäyttö asetuksineen. Kaikki ehdotukset esikatsellaan – mitään ei muuteta
-  ilman hyväksyntää, ja kaikki muutokset voi kumota.
+- **Sanaehdotukset oikeasta sanastosta**: sovelluksessa on ~46 000 suomen sanan sanasto
+  (laiskasti ladattava), ja valitun kohdan risteyskirjaimet toimivat hakurajoitteina –
+  jokainen ehdotus sopii ruudukkoon sellaisenaan. Ehdotukset järjestetään yleisyyden
+  mukaan (7 400 yleisintä sanaa taajuusrankattuina), ja paneeli näyttää myös kuvioon
+  sopivien sanojen kokonaismäärän. Automaattitäyttö käyttää samaa sanastoa.
+- **Tekoälyavustin**: vihjeiden generointi ja muokkaus (helpompi/vaikeampi/lyhyempi/
+  hauskempi) ovat vielä mock-toteutuksia, jotka on eriytetty rajapinnaksi
+  (`src/logic/ai.ts`) oikean AI-palvelun kytkemistä varten. Kaikki ehdotukset
+  esikatsellaan – mitään ei muuteta ilman hyväksyntää, ja kaikki muutokset voi kumota.
 - **Tarkistus**: ristiriitaiset risteykset, sijoittamattomat pakolliset sanat,
   kaksoisvastaukset, vihjeettömät sanat, linkittämättömät kuvat, virheelliset nuolet,
   eristyneet ruudut, puuttuva otsikko ym. – luokiteltuina virheiksi, varoituksiksi ja
@@ -71,6 +76,18 @@ src/
 
 Tekoälylogiikka (`src/logic/ai.ts`) on eriytetty editorista ja viennistä, joten mock-funktiot
 voi korvata oikeilla API-kutsuilla muuttamatta muuta sovellusta.
+
+## Sanasto
+
+Sanaehdotusten sanasto (`src/logic/words-fi.ts`) on generoitu tiedosto, joka yhdistää:
+
+- [Kotuksen nykysuomen sanalistan](https://kaino.kotus.fi/sanat/nykysuomi/) (CC BY 4.0),
+  ladattu [hugovk/everyfinnishword](https://github.com/hugovk/everyfinnishword)-peilistä
+- [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords) -taajuuslistan
+  (fi_50k, CC BY-SA 4.0) sanojen yleisyysjärjestystä varten
+
+Uudelleengenerointi: lataa lähdetiedostot ja aja
+`node scripts/build-wordlist.mjs kaikkisanat.txt fi_50k.txt`.
 
 ## Huomioita
 

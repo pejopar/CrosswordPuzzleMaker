@@ -9,6 +9,9 @@ export interface PrintRequest {
   includeTitle: boolean;
   includeIntro: boolean;
   includeAuthor: boolean;
+  bleed?: boolean;
+  cropMarks?: boolean;
+  pageNumbers?: boolean;
 }
 
 let trigger: ((req: PrintRequest) => void) | null = null;
@@ -31,18 +34,38 @@ export default function PrintSheet() {
 
   useEffect(() => {
     if (!req) return;
-    const t = window.setTimeout(() => {
-      window.print();
-      setReq(null);
-    }, 120);
-    return () => window.clearTimeout(t);
+    // Arkki tyhjennetään vasta kun tulostus on oikeasti päättynyt
+    const onAfter = () => setReq(null);
+    window.addEventListener('afterprint', onAfter);
+    const t = window.setTimeout(() => window.print(), 150);
+    return () => {
+      window.removeEventListener('afterprint', onAfter);
+      window.clearTimeout(t);
+    };
   }, [req]);
 
   if (!req) return null;
   const p = state.project;
-  const base = { grayscale: req.grayscale, includeTitle: req.includeTitle, includeIntro: req.includeIntro, includeAuthor: req.includeAuthor };
-  const puzzleSvg = buildSvg(p, { ...base, showSolution: false });
-  const keySvg = req.includeAnswers ? buildSvg(p, { ...base, showSolution: true }) : null;
+  const base = {
+    grayscale: req.grayscale,
+    includeTitle: req.includeTitle,
+    includeIntro: req.includeIntro,
+    includeAuthor: req.includeAuthor,
+    bleed: req.bleed,
+    cropMarks: req.cropMarks,
+  };
+  const puzzleSvg = buildSvg(p, {
+    ...base,
+    showSolution: false,
+    pageNumber: req.pageNumbers ? 1 : undefined,
+  });
+  const keySvg = req.includeAnswers
+    ? buildSvg(p, {
+        ...base,
+        showSolution: true,
+        pageNumber: req.pageNumbers ? 2 : undefined,
+      })
+    : null;
 
   return (
     <div className="print-sheet">

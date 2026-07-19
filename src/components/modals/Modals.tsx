@@ -589,14 +589,25 @@ function ExportModal() {
         includeTitle,
         includeIntro,
         includeAuthor,
+        bleed,
+        cropMarks,
+        pageNumber: pageNumber ? 1 : undefined,
       }),
-    [p, showKeyPreview, grayscale, includeTitle, includeIntro, includeAuthor]
+    [p, showKeyPreview, grayscale, includeTitle, includeIntro, includeAuthor, bleed, cropMarks, pageNumber]
   );
 
   const close = () => ui({ modal: null });
 
   const doExport = async () => {
-    const opts = { grayscale, includeTitle, includeIntro, includeAuthor };
+    const opts = {
+      grayscale,
+      includeTitle,
+      includeIntro,
+      includeAuthor,
+      bleed,
+      cropMarks,
+      pageNumber: pageNumber ? 1 : undefined,
+    };
     if (format === 'png') {
       await exportPng(p, { ...opts, showSolution: showKeyPreview }, quality === 'korkea' ? 3 : 2);
       toast('PNG-kuva ladattu');
@@ -611,6 +622,9 @@ function ExportModal() {
         includeTitle,
         includeIntro,
         includeAuthor,
+        bleed,
+        cropMarks,
+        pageNumbers: pageNumber,
       });
       close();
       return;

@@ -1596,7 +1596,7 @@ textarea:focus-visible,
   box-shadow: var(--shadow);
 }
 
-.export-preview-page svg {
+.export-preview-page > svg {
   max-width: 100%;
   height: auto;
   display: block;
@@ -1652,7 +1652,8 @@ textarea:focus-visible,
     align-items: center;
   }
 
-  .print-page svg {
+  .print-page > div > svg,
+  .print-page > svg {
     max-width: 100%;
     height: auto;
   }
