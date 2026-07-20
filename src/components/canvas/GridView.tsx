@@ -22,6 +22,8 @@ import {
 } from '../../logic/grid';
 import { uid } from '../../model/types';
 import { dndState, dragActive, clearDrag } from '../../state/dnd';
+import { fontFamily } from '../../logic/fonts';
+import { blockedFill } from '../../model/themes';
 
 export interface GridViewProps {
   project: Project;
@@ -654,14 +656,13 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
 
   const gridW = p.cols * S + lw;
   const gridH = p.rows * S + lw;
-  const fontFamily =
-    p.style.font === 'serif' ? 'Georgia, serif' : p.style.font === 'cond' ? "'Archivo Black', 'Arial Black', sans-serif" : "'Archivo', 'Helvetica Neue', Arial, sans-serif";
+  const gridFont = fontFamily(p.style.font);
 
   return (
     <div
       ref={wrapRef}
       className={`grid-wrap ${isEditor ? 'editor' : 'static'} tool-${tool}`}
-      style={{ width: gridW, height: gridH, fontFamily }}
+      style={{ width: gridW, height: gridH, fontFamily: gridFont, ['--line' as string]: p.style.gridLineColor }}
       onMouseEnter={() => setHoverGrid(true)}
       onMouseLeave={() => setHoverGrid(false)}
     >
@@ -692,6 +693,19 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
             borderWidth: cell.type === 'empty' ? 1 : lw,
           };
           if (cell.type === 'letter') style.background = p.style.cellBg;
+          if (p.style.cornerRadius > 0 && (cell.type === 'letter' || cell.type === 'blocked')) {
+            style.borderRadius = p.style.cornerRadius;
+          }
+          if (cell.type === 'blocked') {
+            const bf = blockedFill(p.style);
+            if (bf === 'hatch') {
+              style.background = `repeating-linear-gradient(45deg, #fff 0 3px, ${p.style.gridLineColor} 3px 5px)`;
+              style.borderColor = p.style.gridLineColor;
+            } else {
+              style.background = bf;
+              style.borderColor = bf;
+            }
+          }
           return (
             <div
               key={key}
@@ -745,6 +759,7 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
               width: w,
               height: h,
               borderWidth: lw,
+              borderRadius: p.style.cornerRadius > 0 ? p.style.cornerRadius : undefined,
               background:
                 rg.kind === 'text'
                   ? rg.bg ?? p.style.clueBg
@@ -815,7 +830,15 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
               />
             )}
             {/* Suuntanuoli */}
-            {rg.arrow && <Arrow edge={rg.arrow.edge} dir={rg.arrow.dir} size={S} outline={p.style.arrowStyle === 'outline'} />}
+            {rg.arrow && (
+              <Arrow
+                edge={rg.arrow.edge}
+                dir={rg.arrow.dir}
+                size={S * ({ S: 0.2, M: 0.28, L: 0.38 }[p.style.arrowSize] ?? 0.28)}
+                outline={p.style.arrowStyle === 'outline'}
+                color={p.style.gridLineColor}
+              />
+            )}
             {/* Koonmuutoskahva (vain yksittäisvalinnassa) */}
             {soloSelected && (
               <div
@@ -996,10 +1019,10 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
   );
 }
 
-function Arrow({ edge, dir, size, outline }: { edge: 'right' | 'bottom'; dir: string; size: number; outline: boolean }) {
-  const s = Math.max(10, size * 0.28);
-  const fill = outline ? 'none' : '#111';
-  const stroke = '#111';
+function Arrow({ edge, dir, size, outline, color }: { edge: 'right' | 'bottom'; dir: string; size: number; outline: boolean; color: string }) {
+  const s = Math.max(8, size);
+  const fill = outline ? 'none' : color;
+  const stroke = color;
   if (edge === 'right') {
     const bend = dir === 'right-down';
     return (

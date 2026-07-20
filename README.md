@@ -78,6 +78,18 @@ src/
 Tekoälylogiikka (`src/logic/ai.ts`) on eriytetty editorista ja viennistä, joten mock-funktiot
 voi korvata oikeilla API-kutsuilla muuttamatta muuta sovellusta.
 
+## Tyylit ja teemat
+
+Tyyli-paneelissa on kuusi valmista teemaa (Pop, Klassikko, Retro, Neon, Luonto,
+Mustavalko), jotka asettavat koko visuaalisen ilmeen yhdellä klikkauksella –
+sisältö (otsikko, tekijä, johdanto, alatunniste, logo) säilyy teemaa vaihtaessa.
+Kaikki asetukset ovat säädettävissä teeman päälle: korostusväri, viivan paksuus ja
+väri, kulmien pyöristys, estettyjen ruutujen tyyli (täysi/tumma/vinoviivoitus/
+korostusväri), otsikon tyyli (palkki/alleviivaus/kehys/pelkkä teksti), kuusi
+kirjasintyyliä, nuolien koko ja tyyli sekä alatunniste. Oman tyylin voi tallentaa
+uudelleenkäytettäväksi teemaksi (localStorage). Kaikki tyylit siirtyvät myös
+SVG-, PNG- ja tulostusvientiin.
+
 ## Sanasto
 
 Sanaehdotusten sanasto (`src/logic/words-fi.ts`) on generoitu tiedosto, joka yhdistää:

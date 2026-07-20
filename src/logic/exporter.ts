@@ -1,4 +1,6 @@
-import { Project, Region } from '../model/types';
+import { Project, Region, normalizeProject } from '../model/types';
+import { fontFamily } from './fonts';
+import { blockedFill } from '../model/themes';
 
 export interface ExportOptions {
   showSolution: boolean;
@@ -68,17 +70,28 @@ function fitText(
   return { fs, lines: wrapText(text, maxChars).slice(0, maxLines), lineH };
 }
 
-function arrowSvg(rg: Region, x: number, y: number, w: number, h: number, outline: boolean): string {
+const ARROW_SIZES = { S: 5.5, M: 7, L: 9.5 } as const;
+
+function arrowSvg(
+  rg: Region,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  outline: boolean,
+  size: 'S' | 'M' | 'L',
+  color: string
+): string {
   if (!rg.arrow) return '';
-  const s = 7;
-  const fill = outline ? '#fff' : '#111';
-  const stroke = outline ? ' stroke="#111" stroke-width="1.4"' : '';
+  const s = ARROW_SIZES[size] ?? 7;
+  const fill = outline ? '#fff' : color;
+  const stroke = outline ? ` stroke="${color}" stroke-width="1.4"` : '';
   if (rg.arrow.edge === 'right') {
     const ax = x + w;
     const ay = y + h / 2;
     if (rg.arrow.dir === 'right-down') {
       return (
-        `<path d="M ${ax} ${ay - 4} h 9 v 9" fill="none" stroke="#111" stroke-width="2.2"/>` +
+        `<path d="M ${ax} ${ay - 4} h 9 v 9" fill="none" stroke="${color}" stroke-width="2.2"/>` +
         `<path d="M ${ax + 9 - s / 2} ${ay + 4} l ${s / 2} ${s} l ${s / 2} -${s} z" fill="${fill}"${stroke}/>`
       );
     }
@@ -88,7 +101,7 @@ function arrowSvg(rg: Region, x: number, y: number, w: number, h: number, outlin
   const ay = y + h;
   if (rg.arrow.dir === 'down-right') {
     return (
-      `<path d="M ${ax - 4} ${ay} v 9 h 9" fill="none" stroke="#111" stroke-width="2.2"/>` +
+      `<path d="M ${ax - 4} ${ay} v 9 h 9" fill="none" stroke="${color}" stroke-width="2.2"/>` +
       `<path d="M ${ax + 4} ${ay + 9 - s / 2} l ${s} ${s / 2} l -${s} ${s / 2} z" fill="${fill}"${stroke}/>`
     );
   }
@@ -103,6 +116,9 @@ export function buildSvg(p: Project, opts: ExportOptions): string {
   const accent = opts.grayscale ? '#c8c8c8' : p.style.accent;
   const clueBg = opts.grayscale ? '#efefef' : p.style.clueBg;
   const outlineArrows = p.style.arrowStyle === 'outline';
+  const lineColor = opts.grayscale ? '#111' : p.style.gridLineColor;
+  const rx = p.style.cornerRadius > 0 ? ` rx="${(p.style.cornerRadius * 0.9).toFixed(1)}"` : '';
+  const asz = p.style.arrowSize;
 
   // Otsikkoalueen korkeus lasketaan sisällöstä
   const introLines = opts.includeIntro && p.style.intro ? wrapText(p.style.intro, Math.floor(gw / 6.4)).slice(0, 4) : [];
@@ -114,15 +130,21 @@ export function buildSvg(p: Project, opts: ExportOptions): string {
   const bleedPx = opts.bleed ? 14 : 0;
   const markPx = opts.cropMarks ? 18 : 0;
   const off = bleedPx + markPx; // sisällön siirtymä
-  const footerH = opts.pageNumber ? 24 : 0;
+  const footerH = (opts.pageNumber ? 24 : 0) + (p.style.footer ? 18 : 0);
   const W = gw + PAD * 2 + off * 2;
   const H = gh + PAD * 2 + headerH + footerH + off * 2;
 
   const parts: string[] = [];
   parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Archivo, Helvetica, Arial, sans-serif">`
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${fontFamily(p.style.font)}">`
   );
   parts.push(`<rect width="${W}" height="${H}" fill="#FFFDF7"/>`);
+  if (p.style.blockedStyle === 'hatch') {
+    parts.push(
+      `<defs><pattern id="hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">` +
+        `<rect width="6" height="6" fill="#fff"/><rect width="2.4" height="6" fill="${lineColor}"/></pattern></defs>`
+    );
+  }
 
   // Leikkuumerkit trimmilaatikon kulmiin
   if (opts.cropMarks) {
@@ -140,10 +162,19 @@ export function buildSvg(p: Project, opts: ExportOptions): string {
   if (titleH) {
     const title = p.style.title;
     const barW = Math.min(gw, Math.round(title.length * 19.5 + 28));
-    parts.push(`<rect x="${cx}" y="${y0}" width="${barW}" height="44" fill="${accent}"/>`);
+    const ts = p.style.titleStyle;
+    const textX = ts === 'bar' || ts === 'boxed' ? cx + 14 : cx;
+    if (ts === 'bar') {
+      parts.push(`<rect x="${cx}" y="${y0}" width="${barW}" height="44" fill="${accent}"/>`);
+    } else if (ts === 'boxed') {
+      parts.push(`<rect x="${cx}" y="${y0}" width="${barW}" height="44" fill="none" stroke="${lineColor}" stroke-width="3"/>`);
+    }
     parts.push(
-      `<text x="${cx + 14}" y="${y0 + 31}" font-size="28" font-weight="800" letter-spacing="0.5" fill="#111">${esc(title)}</text>`
+      `<text x="${textX}" y="${y0 + 31}" font-size="28" font-weight="800" letter-spacing="0.5" fill="#111">${esc(title)}</text>`
     );
+    if (ts === 'underline') {
+      parts.push(`<rect x="${cx}" y="${y0 + 38}" width="${barW}" height="5" fill="${accent}"/>`);
+    }
     y0 += 50;
   }
   if (authorH) {
@@ -166,12 +197,19 @@ export function buildSvg(p: Project, opts: ExportOptions): string {
       const y = y0 + r * CELL;
       if (cell.type === 'empty') continue;
       if (cell.type === 'blocked') {
-        parts.push(`<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" fill="${opts.grayscale ? '#222' : '#17151a'}"/>`);
+        const bf =
+          p.style.blockedStyle === 'hatch'
+            ? 'url(#hatch)'
+            : opts.grayscale
+              ? '#222'
+              : blockedFill(p.style);
+        const bStroke = p.style.blockedStyle === 'hatch' ? ` stroke="${lineColor}" stroke-width="${line}"` : '';
+        parts.push(`<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" fill="${bf}"${bStroke}/>`);
         continue;
       }
       if (cell.type === 'letter') {
         parts.push(
-          `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" fill="${opts.grayscale ? '#fff' : p.style.cellBg}" stroke="#111" stroke-width="${line}"/>`
+          `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}"${rx} fill="${opts.grayscale ? '#fff' : p.style.cellBg}" stroke="${lineColor}" stroke-width="${line}"/>`
         );
         if (opts.showSolution && cell.letter) {
           parts.push(
@@ -190,7 +228,7 @@ export function buildSvg(p: Project, opts: ExportOptions): string {
     const h = rg.h * CELL;
     if (rg.kind === 'text') {
       parts.push(
-        `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${rg.bg && !opts.grayscale ? rg.bg : clueBg}" stroke="#111" stroke-width="${line}"/>`
+        `<rect x="${x}" y="${y}" width="${w}" height="${h}"${rx} fill="${rg.bg && !opts.grayscale ? rg.bg : clueBg}" stroke="${lineColor}" stroke-width="${line}"/>`
       );
       const { fs, lines, lineH } = fitText(rg.text ?? '', w, h, rg.fontSize ?? 9);
       const blockH = lines.length * lineH;
@@ -200,9 +238,9 @@ export function buildSvg(p: Project, opts: ExportOptions): string {
           `<text x="${x + w / 2}" y="${(startY + i * lineH).toFixed(1)}" font-size="${fs}" font-weight="600" text-anchor="middle" fill="#111">${esc(ln)}</text>`
         );
       });
-      parts.push(arrowSvg(rg, x, y, w, h, outlineArrows));
+      parts.push(arrowSvg(rg, x, y, w, h, outlineArrows, asz, lineColor));
     } else if (rg.kind === 'image') {
-      parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#fff" stroke="#111" stroke-width="${line}"/>`);
+      parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}"${rx} fill="#fff" stroke="${lineColor}" stroke-width="${line}"/>`);
       const img = rg.imageId ? imgById.get(rg.imageId) : undefined;
       if (img) {
         // clipPath rajaa kuvan alueen sisään (myös zoomattuna)
@@ -227,12 +265,12 @@ export function buildSvg(p: Project, opts: ExportOptions): string {
         parts.push(`<text x="${x + w / 2}" y="${y + h / 2 + 3}" font-size="10" text-anchor="middle" fill="#888">KUVA</text>`);
       }
       if (p.style.imageBorder) {
-        parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#111" stroke-width="${line + 1}"/>`);
+        parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}"${rx} fill="none" stroke="${lineColor}" stroke-width="${line + 1}"/>`);
       }
-      parts.push(arrowSvg(rg, x, y, w, h, outlineArrows));
+      parts.push(arrowSvg(rg, x, y, w, h, outlineArrows, asz, lineColor));
     } else {
       parts.push(
-        `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${opts.grayscale ? '#ddd' : rg.bg ?? accent}" stroke="#111" stroke-width="${line}"/>`
+        `<rect x="${x}" y="${y}" width="${w}" height="${h}"${rx} fill="${opts.grayscale ? '#ddd' : rg.bg ?? accent}" stroke="${lineColor}" stroke-width="${line}"/>`
       );
       if (rg.text) {
         const fs = Math.min(15, h * 0.32, (w - 8) / Math.max(1, rg.text.length) / 0.62);
@@ -244,7 +282,14 @@ export function buildSvg(p: Project, opts: ExportOptions): string {
   }
 
   // Ulkoreuna
-  parts.push(`<rect x="${cx}" y="${y0}" width="${gw}" height="${gh}" fill="none" stroke="#111" stroke-width="${line + 1}"/>`);
+  parts.push(`<rect x="${cx}" y="${y0}" width="${gw}" height="${gh}" fill="none" stroke="${lineColor}" stroke-width="${line + 1}"/>`);
+
+  // Alatunniste
+  if (p.style.footer) {
+    parts.push(
+      `<text x="${W / 2}" y="${H - off - (opts.pageNumber ? 24 : 8)}" font-size="10" text-anchor="middle" fill="#555">${esc(p.style.footer)}</text>`
+    );
+  }
 
   // Sivunumero
   if (opts.pageNumber) {
@@ -304,5 +349,5 @@ export function parseProjectFile(text: string): Project {
   if (!project.cells || !project.rows || !project.cols) {
     throw new Error('Tiedosto ei ole kelvollinen Ristikkostudio-projekti');
   }
-  return project as Project;
+  return normalizeProject(project as Project);
 }

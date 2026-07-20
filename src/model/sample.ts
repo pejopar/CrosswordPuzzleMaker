@@ -7,6 +7,7 @@ import {
   makeGrid,
   uid,
   Dir,
+  DEFAULT_STYLE,
 } from './types';
 
 function svgDataUrl(svg: string): string {
@@ -188,14 +189,7 @@ export function createSampleProject(): Project {
     placements,
     images: sampleImages.map((i) => ({ ...i })),
     style: {
-      accent: '#FFD400',
-      gridLine: 2,
-      cellBg: '#FFFFFF',
-      clueBg: '#FFF6D6',
-      font: 'sans',
-      arrowStyle: 'solid',
-      imageBorder: true,
-      showHeader: true,
+      ...DEFAULT_STYLE,
       title: 'VIIKON POP-RISTIKKO',
       author: 'Ristikkostudio',
       intro: 'Ratkaise vihjeet ja täytä ruudut. Nuolet kertovat vastauksen suunnan – vastaukset kulkevat aina oikealle tai alas.',
@@ -226,17 +220,8 @@ export function createBlankProject(opts: {
     placements: [],
     images: sampleImages.map((i) => ({ ...i, usedAt: undefined })),
     style: {
-      accent: '#FFD400',
-      gridLine: 2,
-      cellBg: '#FFFFFF',
-      clueBg: '#FFF6D6',
-      font: 'sans',
-      arrowStyle: 'solid',
-      imageBorder: true,
-      showHeader: true,
+      ...DEFAULT_STYLE,
       title: (opts.name || 'UUSI RISTIKKO').toUpperCase(),
-      author: '',
-      intro: '',
     },
     theme: opts.theme,
     difficulty: opts.difficulty,

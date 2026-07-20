@@ -769,6 +769,68 @@ textarea:focus-visible,
   background: var(--paper);
 }
 
+/* Teemakortit */
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.theme-card-wrap {
+  position: relative;
+}
+
+.theme-card {
+  width: 100%;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+
+.theme-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 0 rgba(23, 21, 26, 0.25);
+}
+
+.theme-swatch-bar {
+  width: 70%;
+  height: 9px;
+  display: block;
+}
+
+.theme-swatch-cells {
+  display: flex;
+  gap: 2px;
+}
+
+.theme-swatch-cells span {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+}
+
+.theme-name {
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.theme-del {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--paper);
+  border-radius: 50%;
+  padding: 1px 5px;
+  font-size: 10px;
+}
+
 /* Korostusvärit */
 
 .accent-row {
@@ -885,6 +947,13 @@ textarea:focus-visible,
   align-items: flex-start;
   justify-content: center;
   padding-top: 10px;
+}
+
+.page-footer {
+  text-align: center;
+  font-size: 11px;
+  color: #555;
+  padding-top: 8px;
 }
 
 /* ---------- Ruudukko ---------- */

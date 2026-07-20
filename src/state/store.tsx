@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useReducer, useRef } from 'react';
-import { Dir, Issue, Project } from '../model/types';
+import { Dir, Issue, Project, normalizeProject } from '../model/types';
 import { createSampleProject } from '../model/sample';
 
 export type Tool =
@@ -151,7 +151,7 @@ function loadInitial(): Project {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const p = JSON.parse(raw);
-      if (p && p.cells && p.rows) return p as Project;
+      if (p && p.cells && p.rows) return normalizeProject(p as Project);
     }
   } catch {
     // paikallinen tallennus ei käytettävissä – aloitetaan esimerkkiprojektista

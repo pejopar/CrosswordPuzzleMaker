@@ -15,6 +15,7 @@ import {
 } from '../../logic/grid';
 import { suggestFitting } from '../../logic/ai';
 import { uid } from '../../model/types';
+import { fontFamily } from '../../logic/fonts';
 
 const PAGE_PX: Record<string, { w: number; h: number }> = {
   A4: { w: 794, h: 1123 },
@@ -297,12 +298,17 @@ export default function CanvasArea() {
     setZoom((el.clientWidth - 80) / pageW);
   };
 
-  const fontFamily =
-    p.style.font === 'serif'
-      ? 'Georgia, serif'
-      : p.style.font === 'cond'
-        ? "'Archivo Black', 'Arial Black', sans-serif"
-        : "'Archivo', 'Helvetica Neue', Arial, sans-serif";
+  const pageFont = fontFamily(p.style.font);
+
+  // Otsikkotyylin mukainen ulkoasu
+  const titleStyle: React.CSSProperties =
+    p.style.titleStyle === 'bar'
+      ? { background: p.style.accent }
+      : p.style.titleStyle === 'underline'
+        ? { background: 'none', padding: '4px 0', borderBottom: `6px solid ${p.style.accent}`, transform: 'none' }
+        : p.style.titleStyle === 'boxed'
+          ? { background: 'none', border: `3px solid ${p.style.gridLineColor}`, transform: 'none' }
+          : { background: 'none', padding: '4px 0', transform: 'none' };
 
   return (
     <main className={`canvas-area view-${view}`} aria-label="Ristikon työtila">
@@ -320,14 +326,14 @@ export default function CanvasArea() {
         <div className="canvas-center" style={{ minWidth: pageW * zoom + 120, minHeight: pageH * zoom + 120 }}>
           <div
             className={`page ${view !== 'editor' ? 'page-clean' : ''}`}
-            style={{ width: pageW, height: pageH, transform: `scale(${zoom})`, fontFamily }}
+            style={{ width: pageW, height: pageH, transform: `scale(${zoom})`, fontFamily: pageFont }}
           >
             <div className="page-inner" style={{ padding: marginPx }}>
               {p.style.showHeader && (
                 <header className="page-header">
                   <div className="page-title-row">
                     {p.style.logoDataUrl && <img className="page-logo" src={p.style.logoDataUrl} alt="Logo" />}
-                    <h1 className="page-title" style={{ background: p.style.accent }}>
+                    <h1 className="page-title" style={titleStyle}>
                       {p.style.title || 'NIMETÖN RISTIKKO'}
                     </h1>
                   </div>
@@ -338,6 +344,7 @@ export default function CanvasArea() {
               <div className="page-grid-holder">
                 <GridView project={p} mode={view} cellSize={cellSize} interactive={view === 'editor'} />
               </div>
+              {p.style.footer && <div className="page-footer">{p.style.footer}</div>}
             </div>
           </div>
         </div>

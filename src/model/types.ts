@@ -77,19 +77,55 @@ export interface PageSettings {
   margins: number;
 }
 
+export type FontId = 'sans' | 'cond' | 'serif' | 'slab' | 'rounded' | 'mono';
+export type BlockedStyle = 'solid' | 'dark' | 'hatch' | 'accent';
+export type TitleStyle = 'bar' | 'underline' | 'boxed' | 'plain';
+export type ArrowSize = 'S' | 'M' | 'L';
+
 export interface StyleSettings {
   accent: string;
   gridLine: number;
+  gridLineColor: string;
   cellBg: string;
   clueBg: string;
-  font: 'sans' | 'serif' | 'cond';
+  cornerRadius: number;
+  blockedStyle: BlockedStyle;
+  font: FontId;
   arrowStyle: 'solid' | 'outline';
+  arrowSize: ArrowSize;
   imageBorder: boolean;
   showHeader: boolean;
+  titleStyle: TitleStyle;
   title: string;
   author: string;
   intro: string;
+  footer: string;
   logoDataUrl?: string;
+}
+
+export const DEFAULT_STYLE: StyleSettings = {
+  accent: '#FFD400',
+  gridLine: 2,
+  gridLineColor: '#17151a',
+  cellBg: '#FFFFFF',
+  clueBg: '#FFF6D6',
+  cornerRadius: 0,
+  blockedStyle: 'solid',
+  font: 'sans',
+  arrowStyle: 'solid',
+  arrowSize: 'M',
+  imageBorder: true,
+  showHeader: true,
+  titleStyle: 'bar',
+  title: '',
+  author: '',
+  intro: '',
+  footer: '',
+};
+
+/** Täydentää puuttuvat tyylikentät (vanhat projektitiedostot ja localStorage). */
+export function normalizeProject(p: Project): Project {
+  return { ...p, style: { ...DEFAULT_STYLE, ...p.style } };
 }
 
 export interface Project {
