@@ -279,13 +279,45 @@ export function autoPlaceEntries(p: Project, entryIds: string[]): { project: Pro
     const word = entry.answer.toUpperCase();
     let best: { r: number; c: number; dir: Dir; score: number } | null = null;
     const hasLetters = cur.placements.length > 0;
+
+    // Nykyisten kirjainten rajauslaatikko ja painopiste tiiviyden arviointiin
+    let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+    let sumR = 0, sumC = 0, count = 0;
+    for (let r = 0; r < cur.rows; r++)
+      for (let c = 0; c < cur.cols; c++)
+        if (cur.cells[r][c].type === 'letter') {
+          minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+          minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+          sumR += r; sumC += c; count++;
+        }
+    const centR = count ? sumR / count : cur.rows / 2;
+    const centC = count ? sumC / count : cur.cols / 2;
+    const boxArea = count ? (maxR - minR + 1) * (maxC - minC + 1) : 0;
+
     for (let r = 0; r < cur.rows; r++)
       for (let c = 0; c < cur.cols; c++)
         for (const dir of ['across', 'down'] as Dir[]) {
           const fit = tryFit(cur, word, r, c, dir);
           if (fit < 0) continue;
           if (hasLetters && fit === 0) continue; // vaadi risteys kun ruudukossa on jo sanoja
-          const score = fit * 10 - Math.abs(r - cur.rows / 2) - Math.abs(c - cur.cols / 2);
+          const endR = dir === 'down' ? r + word.length - 1 : r;
+          const endC = dir === 'across' ? c + word.length - 1 : c;
+          const midR = (r + endR) / 2;
+          const midC = (c + endC) / 2;
+          let score: number;
+          if (!hasLetters) {
+            // Ensimmäinen sana ruudukon keskelle
+            score = -(Math.abs(midR - cur.rows / 2) + Math.abs(midC - cur.cols / 2));
+          } else {
+            // Suosi risteyksiä, pysy lähellä painopistettä ja kasvata
+            // rajauslaatikkoa mahdollisimman vähän
+            const growth =
+              (Math.max(maxR, endR) - Math.min(minR, r) + 1) *
+                (Math.max(maxC, endC) - Math.min(minC, c) + 1) -
+              boxArea;
+            const dist = Math.abs(midR - centR) + Math.abs(midC - centC);
+            score = fit * 20 - dist * 2 - growth * 0.6;
+          }
           if (!best || score > best.score) best = { r, c, dir, score };
         }
     if (best) {
@@ -351,6 +383,42 @@ export function moveRegion(
     reg.arrow = { edge: dir.startsWith('down') ? 'bottom' : 'right', dir };
   }
   syncRegionCells(n);
+  return n;
+}
+
+/**
+ * Siirtää useita alueita kerralla (monivalinnan ryhmäsiirto).
+ * Palauttaa null, jos yksikin alue ei mahdu kohteeseensa.
+ */
+export function moveRegions(
+  p: Project,
+  moves: { id: string; r: number; c: number }[]
+): Project | null {
+  const n = cloneProject(p);
+  const movingIds = new Set(moves.map((m) => m.id));
+  // Vapautetaan kaikkien siirrettävien nykyiset ruudut ensin
+  for (let r = 0; r < n.rows; r++)
+    for (let c = 0; c < n.cols; c++) {
+      const id = n.cells[r][c].regionId;
+      if (id && movingIds.has(id)) n.cells[r][c] = makeCell();
+    }
+  for (const mv of moves) {
+    const rg = n.regions.find((x) => x.id === mv.id);
+    if (!rg) return null;
+    if (mv.r < 0 || mv.c < 0 || mv.r + rg.h > n.rows || mv.c + rg.w > n.cols) return null;
+    for (let rr = mv.r; rr < mv.r + rg.h; rr++)
+      for (let cc = mv.c; cc < mv.c + rg.w; cc++) {
+        const cell = n.cells[rr][cc];
+        if (cell.regionId) return null;
+        if (cell.type === 'letter' && cell.letter) return null;
+      }
+    rg.r = mv.r;
+    rg.c = mv.c;
+    const type = rg.kind === 'text' ? 'clue' : rg.kind === 'image' ? 'image' : 'decor';
+    for (let rr = mv.r; rr < mv.r + rg.h; rr++)
+      for (let cc = mv.c; cc < mv.c + rg.w; cc++)
+        n.cells[rr][cc] = { type, letter: '', regionId: rg.id } as Cell;
+  }
   return n;
 }
 

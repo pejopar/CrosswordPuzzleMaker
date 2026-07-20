@@ -10,6 +10,7 @@ import {
   fitWordAt,
   makeCell,
   moveRegion,
+  moveRegions,
   movePlacement,
   placementAt,
   placementCells,
@@ -49,6 +50,8 @@ type MovingState =
       w: number;
       h: number;
       transposed: boolean;
+      /** Ryhmäsiirto: muut valitut alueet suhteellisine siirtymineen */
+      group: { id: string; dr: number; dc: number; w: number; h: number }[];
       cur: { r: number; c: number };
     }
   | {
@@ -245,9 +248,40 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
     if (!isEditor || e.button === 2) return;
     e.preventDefault();
     const rg = regionAt(p, r, c);
+    // Ctrl/Cmd-klikkaus lisää alueen monivalintaan tai poistaa siitä
+    if (rg && (e.ctrlKey || e.metaKey) && (tool === 'select' || tool === 'move')) {
+      const set = new Set(state.ui.selRegionIds.length ? state.ui.selRegionIds : selRegionId ? [selRegionId] : []);
+      if (set.has(rg.id)) set.delete(rg.id);
+      else set.add(rg.id);
+      const ids = [...set];
+      ui({
+        sel: { r, c },
+        selRect: null,
+        selRegionId: ids.length ? (set.has(rg.id) ? rg.id : ids[ids.length - 1]) : null,
+        selRegionIds: ids,
+        aiPreview: null,
+      });
+      return;
+    }
     if (tool === 'move') {
       if (rg) {
-        ui({ sel: { r, c }, selRegionId: rg.id, selRect: null });
+        // Jos tartuttu alue kuuluu monivalintaan, siirretään koko ryhmä
+        const multi = state.ui.selRegionIds.length > 1 && state.ui.selRegionIds.includes(rg.id);
+        const group = multi
+          ? state.ui.selRegionIds
+              .filter((id) => id !== rg.id)
+              .map((id) => {
+                const g = p.regions.find((x) => x.id === id);
+                return g ? { id, dr: g.r - rg.r, dc: g.c - rg.c, w: g.w, h: g.h } : null;
+              })
+              .filter((g): g is { id: string; dr: number; dc: number; w: number; h: number } => !!g)
+          : [];
+        ui({
+          sel: { r, c },
+          selRegionId: rg.id,
+          selRegionIds: multi ? state.ui.selRegionIds : [rg.id],
+          selRect: null,
+        });
         setMoving({
           kind: 'region',
           regionId: rg.id,
@@ -256,6 +290,7 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
           w: rg.w,
           h: rg.h,
           transposed: false,
+          group,
           cur: { r, c },
         });
         return;
@@ -306,6 +341,31 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
       const rect = normRect(drag.start, { r, c });
       if (rect.r0 !== rect.r1 || rect.c0 !== rect.c1) ui({ selRect: rect });
     }
+  }
+
+  // Kaksoisklikkaus kirjainruudussa valitsee koko sanan
+  function onCellDoubleClick(r: number, c: number) {
+    if (!isEditor) return;
+    if (cellAtType(r, c) !== 'letter') return;
+    const slot =
+      findSlot(p, r, c, state.ui.dirPref) ??
+      findSlot(p, r, c, state.ui.dirPref === 'across' ? 'down' : 'across');
+    if (!slot) return;
+    ui({
+      sel: { r, c },
+      selRegionId: null,
+      selRect: {
+        r0: slot.r,
+        c0: slot.c,
+        r1: slot.dir === 'down' ? slot.r + slot.length - 1 : slot.r,
+        c1: slot.dir === 'across' ? slot.c + slot.length - 1 : slot.c,
+      },
+      dirPref: slot.dir,
+    });
+  }
+
+  function cellAtType(r: number, c: number) {
+    return p.cells[r]?.[c]?.type;
   }
 
   function onCellContext(e: React.MouseEvent, r: number, c: number) {
@@ -360,6 +420,27 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
       const rg = p.regions.find((x) => x.id === m.regionId);
       if (!rg) return;
       if (t.r === rg.r && t.c === rg.c && !m.transposed) return;
+      if (m.group.length) {
+        // Ryhmäsiirto: kaikki valitut alueet samalla siirtymällä
+        const moves = [
+          { id: m.regionId, r: t.r, c: t.c },
+          ...m.group.map((g) => ({ id: g.id, r: t.r + g.dr, c: t.c + g.dc })),
+        ];
+        const res = moveRegions(p, moves);
+        if (res) {
+          mutate(() => res);
+          ui({
+            sel: { r: t.r, c: t.c },
+            selRegionId: m.regionId,
+            selRegionIds: moves.map((mv) => mv.id),
+            selRect: null,
+          });
+          toast(`${moves.length} aluetta siirretty – kumoa halutessasi (Ctrl+Z)`);
+        } else {
+          toast('Alueet eivät mahdu tähän kohtaan – kokeile toista paikkaa');
+        }
+        return;
+      }
       const res = moveRegion(p, m.regionId, t.r, t.c, m.transposed);
       if (res) {
         mutate(() => res);
@@ -405,7 +486,8 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
         e.preventDefault();
         setMoving((m) => {
           if (!m) return m;
-          if (m.kind === 'region') return { ...m, transposed: !m.transposed };
+          // Ryhmäsiirrossa kääntö ohitetaan – suhteelliset sijainnit säilyvät
+          if (m.kind === 'region') return m.group.length ? m : { ...m, transposed: !m.transposed };
           return { ...m, dir: m.dir === 'across' ? 'down' : 'across', grabIndex: 0 };
         });
       } else if (e.key === 'Escape') {
@@ -620,6 +702,7 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
               onContextMenu={(e) => onCellContext(e, r, c)}
               onDragOver={(e) => onCellDragOver(e, r, c)}
               onDrop={(e) => onCellDrop(e, r, c)}
+              onDoubleClick={() => onCellDoubleClick(r, c)}
               role={isEditor ? 'gridcell' : undefined}
               aria-selected={isEditor ? isSel : undefined}
               data-rc={key}
@@ -646,7 +729,8 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
         const y = rg.r * S;
         const w = rg.w * S + lw;
         const h = rg.h * S + lw;
-        const selected = selRegionId === rg.id && isEditor;
+        const selected = (selRegionId === rg.id || state.ui.selRegionIds.includes(rg.id)) && isEditor;
+        const soloSelected = selected && state.ui.selRegionIds.length <= 1;
         const img = rg.imageId ? p.images.find((i) => i.id === rg.imageId) : undefined;
         const editing = editingRegion === rg.id;
         return (
@@ -732,8 +816,8 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
             )}
             {/* Suuntanuoli */}
             {rg.arrow && <Arrow edge={rg.arrow.edge} dir={rg.arrow.dir} size={S} outline={p.style.arrowStyle === 'outline'} />}
-            {/* Koonmuutoskahva */}
-            {selected && (
+            {/* Koonmuutoskahva (vain yksittäisvalinnassa) */}
+            {soloSelected && (
               <div
                 className="region-handle"
                 title="Muuta alueen kokoa vetämällä"
@@ -807,6 +891,23 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
       {/* Siirron esikatselu */}
       {moving && isEditor && moving.kind === 'region' && (() => {
         const t = regionTargetPos(moving);
+        if (moving.group.length) {
+          const moves = [
+            { id: moving.regionId, r: t.r, c: t.c, w: t.w, h: t.h },
+            ...moving.group.map((g) => ({ id: g.id, r: t.r + g.dr, c: t.c + g.dc, w: g.w, h: g.h })),
+          ];
+          const ok = moveRegions(p, moves) !== null;
+          return moves.map((mv) => (
+            <div
+              key={`gm-${mv.id}`}
+              className={`dnd-ghost ${ok ? 'dnd-ok' : 'dnd-bad'}`}
+              style={{ left: mv.c * S, top: mv.r * S, width: mv.w * S + lw, height: mv.h * S + lw, fontSize: S * 0.4 }}
+              aria-hidden
+            >
+              ✥
+            </div>
+          ));
+        }
         const ok = canPlaceRegion(p, moving.regionId, t.r, t.c, t.w, t.h);
         return (
           <div

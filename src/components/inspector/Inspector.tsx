@@ -21,14 +21,40 @@ import {
 import { AiSuggestion, Dir, Region, uid, DIFFICULTY_LABELS } from '../../model/types';
 
 export default function Inspector() {
-  const { state } = useStore();
+  const { state, mutate, ui, toast } = useStore();
   const p = state.project;
-  const { sel, selRegionId } = state.ui;
+  const { sel, selRegionId, selRegionIds } = state.ui;
 
   const region = selRegionId ? p.regions.find((rg) => rg.id === selRegionId) : undefined;
+  const multiIds = selRegionIds.filter((id) => p.regions.some((rg) => rg.id === id));
 
   let body: React.ReactNode;
-  if (region && region.kind === 'image') body = <ImageInspector region={region} />;
+  if (multiIds.length > 1)
+    body = (
+      <div className="panel">
+        <h3 className="panel-sub">Monivalinta</h3>
+        <div className="panel-hint">
+          <strong>{multiIds.length} aluetta valittu.</strong> Siirrä ryhmää vetämällä
+          Siirrä/käännä-työkalulla tai nuolinäppäimillä. Ctrl-klikkaus lisää tai poistaa
+          alueita valinnasta.
+        </div>
+        <button
+          className="panel-btn danger"
+          onClick={() => {
+            mutate((pr) => {
+              let n = pr;
+              for (const id of multiIds) n = removeRegion(n, id);
+              return n;
+            });
+            ui({ selRegionId: null });
+            toast(`${multiIds.length} aluetta poistettu – kumoa halutessasi (Ctrl+Z)`);
+          }}
+        >
+          Poista valitut alueet ({multiIds.length})
+        </button>
+      </div>
+    );
+  else if (region && region.kind === 'image') body = <ImageInspector region={region} />;
   else if (region) body = <ClueInspector region={region} />;
   else if (sel && p.cells[sel.r]?.[sel.c]?.type === 'letter') body = <SlotInspector />;
   else

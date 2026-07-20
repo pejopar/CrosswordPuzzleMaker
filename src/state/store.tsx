@@ -50,6 +50,8 @@ export interface UIState {
   sel: { r: number; c: number } | null;
   selRect: Rect | null;
   selRegionId: string | null;
+  /** Monivalinta: kaikki valitut alueet (sisältää myös ensisijaisen) */
+  selRegionIds: string[];
   dirPref: Dir;
   /** Ehdota sanaa kirjoitettaessa (ghost-esikatselu, Enter hyväksyy) */
   autoSuggest: boolean;
@@ -92,8 +94,14 @@ function reducer(state: AppState, action: Action): AppState {
         future: [],
       };
     }
-    case 'ui':
-      return { ...state, ui: { ...state.ui, ...action.patch } };
+    case 'ui': {
+      const patch = { ...action.patch };
+      // Yksittäinen aluevalinta pitää monivalintajoukon synkassa automaattisesti
+      if ('selRegionId' in patch && !('selRegionIds' in patch)) {
+        patch.selRegionIds = patch.selRegionId ? [patch.selRegionId] : [];
+      }
+      return { ...state, ui: { ...state.ui, ...patch } };
+    }
     case 'undo': {
       if (!state.past.length) return state;
       const prev = state.past[state.past.length - 1];
@@ -126,6 +134,7 @@ function reducer(state: AppState, action: Action): AppState {
           sel: null,
           selRect: null,
           selRegionId: null,
+          selRegionIds: [],
           modal: null,
           ctxMenu: null,
           issues: null,
@@ -160,6 +169,7 @@ const initialState = (): AppState => ({
     sel: null,
     selRect: null,
     selRegionId: null,
+    selRegionIds: [],
     dirPref: 'across',
     autoSuggest: true,
     zoom: 1,

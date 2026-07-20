@@ -6,6 +6,7 @@ import {
   findSlot,
   movePlacement,
   moveRegion,
+  moveRegions,
   placementAt,
   placeWord,
   removeRegion,
@@ -64,14 +65,24 @@ export default function CanvasArea() {
       // Siirtotyökalulla nuolinäppäimet siirtävät valittua elementtiä ruudun kerrallaan
       const nudge = (dr: number, dc: number): boolean => {
         if (state.ui.tool !== 'move') return false;
-        if (selRegionId) {
-          const rg = p.regions.find((x) => x.id === selRegionId);
-          if (!rg) return false;
-          const res = moveRegion(p, selRegionId, rg.r + dr, rg.c + dc);
+        const regionIds = state.ui.selRegionIds.length
+          ? state.ui.selRegionIds
+          : selRegionId
+            ? [selRegionId]
+            : [];
+        if (regionIds.length) {
+          const moves = regionIds
+            .map((id) => {
+              const rg = p.regions.find((x) => x.id === id);
+              return rg ? { id, r: rg.r + dr, c: rg.c + dc } : null;
+            })
+            .filter((m): m is { id: string; r: number; c: number } => !!m);
+          if (!moves.length) return false;
+          const res = moveRegions(p, moves);
           if (res) {
             mutate(() => res);
-            ui({ sel: { r: rg.r + dr, c: rg.c + dc } });
-          } else toast('Alue ei mahdu siihen suuntaan');
+            ui({ sel: { r: moves[0].r, c: moves[0].c } });
+          } else toast(regionIds.length > 1 ? 'Alueet eivät mahdu siihen suuntaan' : 'Alue ei mahdu siihen suuntaan');
           return true;
         }
         const pl = placementAt(p, r, c);
@@ -217,9 +228,19 @@ export default function CanvasArea() {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         ui({ aiPreview: null });
-        if (selRegionId) {
-          mutate((pr) => removeRegion(pr, selRegionId));
+        const delIds = state.ui.selRegionIds.length
+          ? state.ui.selRegionIds
+          : selRegionId
+            ? [selRegionId]
+            : [];
+        if (delIds.length) {
+          mutate((pr) => {
+            let n = pr;
+            for (const id of delIds) n = removeRegion(n, id);
+            return n;
+          });
           ui({ selRegionId: null });
+          if (delIds.length > 1) toast(`${delIds.length} aluetta poistettu – kumoa halutessasi (Ctrl+Z)`);
         } else if (selRect) {
           mutate((pr) => {
             const n = cloneProject(pr);
@@ -242,7 +263,7 @@ export default function CanvasArea() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [view, sel, selRect, selRegionId, p, mutate, ui, toast, state.ui.dirPref, state.ui.modal, state.ui.ctxMenu, state.ui.tool, state.ui.autoSuggest, state.ui.aiPreview]);
+  }, [view, sel, selRect, selRegionId, p, mutate, ui, toast, state.ui.dirPref, state.ui.modal, state.ui.ctxMenu, state.ui.tool, state.ui.autoSuggest, state.ui.aiPreview, state.ui.selRegionIds]);
 
   const setZoom = (z: number) => ui({ zoom: Math.max(0.3, Math.min(2.5, z)) });
   const zoomStep = (dir: 1 | -1) => {
@@ -250,6 +271,21 @@ export default function CanvasArea() {
     const next = ZOOM_STEPS[Math.max(0, Math.min(ZOOM_STEPS.length - 1, (idx === -1 ? 5 : idx) + dir))];
     setZoom(next);
   };
+  // Ctrl/Cmd + rulla zoomaa kanvaasia (ei-passiivinen kuuntelija,
+  // jotta selaimen oma sivuzoomaus voidaan estää)
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      zoomStep(e.deltaY < 0 ? 1 : -1);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoom]);
+
   const fitPage = () => {
     const el = scrollRef.current;
     if (!el) return;

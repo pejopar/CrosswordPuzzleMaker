@@ -32,7 +32,8 @@ suositus käyttää tietokonetta.
   paikkaan suoraan ruudukossa (vihreä/punainen esikatselu näyttää sopivuuden), R kääntää
   sanan vaaka ↔ pysty tai alueen 90°, ja nuolinäppäimet siirtävät valittua elementtiä
   ruudun kerrallaan. Käännöt ovat aina ruudukon suuntaisia – vinottaisia sanoja ei synny.
-- **Ruudukon muokkaus**: ruutujen valinta, aluevalinta vetämällä ja Shift-klikkauksella,
+- **Ruudukon muokkaus**: kaksoisklikkaus valitsee koko sanan, Ctrl+klikkaus kerää useita
+  alueita monivalintaan (ryhmäsiirto ja -poisto), Ctrl+rulla zoomaa kanvaasia,
   kirjainten kirjoitus näppäimistöltä (myös Ä, Ö, Å), nuolinäppäinnavigointi,
   hiiren oikean napin kontekstivalikko, rivien ja sarakkeiden lisäys/poisto
   (plus-painikkeet ruudukon reunoilla), alueiden koon muutos kahvasta, kumoa/tee uudelleen.
