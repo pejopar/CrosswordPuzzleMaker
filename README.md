@@ -13,8 +13,12 @@ npm run build      # tuotantokäännös dist/-kansioon
 npm run preview    # käännöksen esikatselu
 ```
 
-Sovellus on optimoitu vähintään 1280 px leveille näytöille. Pienemmillä näytöillä näytetään
-suositus käyttää tietokonetta.
+Sovellus on optimoitu työpöytäselaimille ja toimii aina 1024 px:n CSS-leveyteen asti.
+Työkalupalkki tiivistyy portaittain, kun tilaa on vähemmän – esimerkiksi selaimen
+125 %:n zoomauksella 1920×1080-näyttö vastaa 1536×864 px:ää – ja harvemmin käytetyt
+toiminnot (uusi/avaa/tallenna, ruudukon koko) siirtyvät ⋯-valikkoon. Vientipainike
+pysyy aina näkyvissä. Tätä kapeammilla näytöillä näytetään suositus käyttää
+tietokonetta.
 
 ## Ominaisuudet (prototyyppi)
 

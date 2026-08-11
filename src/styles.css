@@ -127,6 +127,64 @@ textarea:focus-visible,
   border-bottom: 3px solid var(--ink);
   flex-wrap: nowrap;
   z-index: 30;
+  /* Viimeinen turvaverkko: mitään ei jää näkymättömiin, vaikka tila loppuisi */
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+/* Tärkeimmät toiminnot eivät saa kutistua pois näkyvistä */
+.toolbar-group,
+.wordmark,
+.export-wrap,
+.donate-tb {
+  flex-shrink: 0;
+}
+
+/* Pitkä/lyhyt tekstiparit: oletuksena pitkä */
+.tb-short {
+  display: none;
+}
+
+/* Ylivuotovalikko näkyy vain kun tila loppuu */
+.toolbar .tb-more-wrap {
+  position: relative;
+  display: none;
+}
+
+.tb-more {
+  font-size: 16px;
+  line-height: 1;
+  padding: 6px 10px;
+}
+
+.tb-more-menu {
+  min-width: 240px;
+  right: auto;
+  left: 0;
+}
+
+.tb-more-size {
+  display: flex;
+  gap: 10px;
+  padding: 8px 14px;
+}
+
+.tb-more-size label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11.5px;
+  font-weight: 700;
+  flex: 1;
+}
+
+.tb-more-size input {
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-weight: 600;
+  width: 100%;
 }
 
 .toolbar-project {
@@ -1582,6 +1640,14 @@ textarea:focus-visible,
   justify-content: flex-end;
   gap: 10px;
   margin-top: 16px;
+  /* Matalilla näytöillä päätoiminto pysyy aina näkyvissä, vaikka sisältö vierii */
+  position: sticky;
+  bottom: -18px;
+  background: var(--paper);
+  padding: 10px 0;
+  margin-bottom: -18px;
+  border-top: 2px solid #eee7d9;
+  z-index: 2;
 }
 
 .modal-actions .panel-btn {
@@ -1829,6 +1895,131 @@ textarea:focus-visible,
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ---------- Kapeat näytöt ja selaimen zoomaus ----------
+   Selaimen 125 %:n zoomaus kutistaa CSS-näkymän (esim. 1920×1080 → 1536×864),
+   joten työkalupalkki tiivistyy portaittain ja harvemmin käytetyt toiminnot
+   siirtyvät ⋯-valikkoon. Vientipainike pysyy aina näkyvissä. */
+
+/* Mitatut leveydet: koko palkki tarvitsee ~1950 px, joten ensimmäinen
+   tiivistys osuu jo täyteen HD-näyttöön. Rajat on johdettu mittauksista. */
+
+@media (max-width: 1950px) {
+  .toolbar {
+    gap: 12px;
+  }
+
+  .grid-size {
+    display: none;
+  }
+
+  .toolbar .tb-more-wrap {
+    display: flex;
+  }
+}
+
+@media (max-width: 1650px) {
+  .toolbar {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .tb-project-actions {
+    display: none;
+  }
+}
+
+@media (max-width: 1400px) {
+  .toolbar {
+    gap: 8px;
+  }
+
+  .tb-full {
+    display: none;
+  }
+
+  .tb-short {
+    display: inline;
+  }
+
+  .tb-btn {
+    padding: 6px 9px;
+  }
+
+  .sidebar {
+    width: 264px;
+    min-width: 264px;
+  }
+
+  .inspector {
+    width: 286px;
+    min-width: 286px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .toolbar {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .wordmark {
+    font-size: 15px;
+    padding: 6px 9px;
+  }
+
+  .toolbar-project {
+    min-width: 96px;
+  }
+
+  .project-name,
+  .project-name-input {
+    font-size: 13.5px;
+  }
+
+  .save-status {
+    font-size: 10.5px;
+  }
+
+  .tb-btn {
+    padding: 6px 8px;
+    font-size: 12.5px;
+  }
+
+  .export-btn {
+    padding: 8px 12px;
+  }
+
+  .sidebar {
+    width: 240px;
+    min-width: 240px;
+  }
+
+  .inspector {
+    width: 264px;
+    min-width: 264px;
+  }
+
+  .tool-grid {
+    gap: 6px;
+  }
+
+  .tool-btn {
+    padding: 8px 4px;
+    font-size: 11.5px;
+  }
+}
+
+/* Matalat näytöt: alapaneeli ei saa syödä kanvasta */
+@media (max-height: 760px) {
+  .bottom-panel {
+    max-height: 168px;
+  }
+
+  .canvas-center {
+    padding: 28px;
   }
 }
 

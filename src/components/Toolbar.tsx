@@ -12,16 +12,29 @@ const SAVE_LABELS: Record<string, string> = {
   idle: '',
 };
 
+/** Pitkä ja lyhyt teksti: kapeilla näytöillä näytetään lyhyempi. */
+function Label({ full, short }: { full: string; short: string }) {
+  return (
+    <>
+      <span className="tb-full">{full}</span>
+      <span className="tb-short">{short}</span>
+    </>
+  );
+}
+
 export default function Toolbar() {
   const { state, mutate, ui, undo, redo, toast } = useStore();
   const p = state.project;
   const [exportOpen, setExportOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
   const [nameEditing, setNameEditing] = useState(false);
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
       if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false);
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
     };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
@@ -37,6 +50,21 @@ export default function Toolbar() {
     ui({ modal: { kind: 'export' } });
     // Vientimodaali lukee halutun välilehden sessionStoragesta
     sessionStorage.setItem('ristikkostudio.exportTab', tab);
+  };
+
+  const openProjectFile = () => document.getElementById('open-project-input')?.click();
+  const saveProjectFile = () => {
+    exportProjectFile(p);
+    toast('Projektitiedosto ladattu');
+  };
+
+  const setCols = (v: number) => {
+    const cols = Math.max(2, Math.min(40, v || p.cols));
+    mutate((pr) => resizeGrid(pr, pr.rows, cols));
+  };
+  const setRows = (v: number) => {
+    const rows = Math.max(2, Math.min(40, v || p.rows));
+    mutate((pr) => resizeGrid(pr, rows, pr.cols));
   };
 
   return (
@@ -72,25 +100,14 @@ export default function Toolbar() {
         </span>
       </div>
 
-      <div className="toolbar-group">
+      <div className="toolbar-group tb-project-actions">
         <button className="tb-btn" onClick={() => ui({ modal: { kind: 'new' } })} title="Uusi ristikko">
-          Uusi ristikko
+          <Label full="Uusi ristikko" short="Uusi" />
         </button>
-        <button
-          className="tb-btn"
-          title="Avaa projektitiedosto"
-          onClick={() => document.getElementById('open-project-input')?.click()}
-        >
+        <button className="tb-btn" title="Avaa projektitiedosto" onClick={openProjectFile}>
           Avaa
         </button>
-        <button
-          className="tb-btn"
-          title="Tallenna projektitiedosto koneellesi"
-          onClick={() => {
-            exportProjectFile(p);
-            toast('Projektitiedosto ladattu');
-          }}
-        >
+        <button className="tb-btn" title="Tallenna projektitiedosto koneellesi" onClick={saveProjectFile}>
           Tallenna
         </button>
       </div>
@@ -121,10 +138,7 @@ export default function Toolbar() {
             max={40}
             value={p.cols}
             aria-label="Ruudukon leveys"
-            onChange={(e) => {
-              const cols = Math.max(2, Math.min(40, Number(e.target.value) || p.cols));
-              mutate((pr) => resizeGrid(pr, pr.rows, cols));
-            }}
+            onChange={(e) => setCols(Number(e.target.value))}
           />
         </label>
         <span className="dim-x">×</span>
@@ -136,10 +150,7 @@ export default function Toolbar() {
             max={40}
             value={p.rows}
             aria-label="Ruudukon korkeus"
-            onChange={(e) => {
-              const rows = Math.max(2, Math.min(40, Number(e.target.value) || p.rows));
-              mutate((pr) => resizeGrid(pr, rows, pr.cols));
-            }}
+            onChange={(e) => setRows(Number(e.target.value))}
           />
         </label>
         <button className="tb-btn" onClick={() => mutate((pr) => addRow(pr, pr.rows))} title="Lisää rivi alas">
@@ -173,12 +184,73 @@ export default function Toolbar() {
       </div>
 
       <div className="toolbar-group">
-        <button className="tb-btn accent-outline" onClick={() => ui({ modal: { kind: 'autofill' } })}>
-          Täytä automaattisesti
+        <button
+          className="tb-btn accent-outline"
+          onClick={() => ui({ modal: { kind: 'autofill' } })}
+          title="Täytä automaattisesti"
+        >
+          <Label full="Täytä automaattisesti" short="Täytä" />
         </button>
-        <button className="tb-btn" onClick={runValidation}>
-          Tarkista ristikko
+        <button className="tb-btn" onClick={runValidation} title="Tarkista ristikko">
+          <Label full="Tarkista ristikko" short="Tarkista" />
         </button>
+      </div>
+
+      {/* Kapeilla näytöillä piiloon menevät toiminnot löytyvät tästä valikosta */}
+      <div className="toolbar-group tb-more-wrap" ref={moreRef}>
+        <button
+          className="tb-btn tb-more"
+          aria-haspopup="menu"
+          aria-expanded={moreOpen}
+          title="Lisää toimintoja"
+          onClick={() => setMoreOpen((v) => !v)}
+        >
+          ⋯
+        </button>
+        {moreOpen && (
+          <div className="export-menu tb-more-menu" role="menu">
+            <button role="menuitem" onClick={() => { setMoreOpen(false); ui({ modal: { kind: 'new' } }); }}>
+              Uusi ristikko
+            </button>
+            <button role="menuitem" onClick={() => { setMoreOpen(false); openProjectFile(); }}>
+              Avaa projekti
+            </button>
+            <button role="menuitem" onClick={() => { setMoreOpen(false); saveProjectFile(); }}>
+              Tallenna projektitiedosto
+            </button>
+            <hr />
+            <div className="tb-more-size">
+              <label>
+                Leveys
+                <input
+                  type="number"
+                  min={2}
+                  max={40}
+                  value={p.cols}
+                  aria-label="Ruudukon leveys"
+                  onChange={(e) => setCols(Number(e.target.value))}
+                />
+              </label>
+              <label>
+                Korkeus
+                <input
+                  type="number"
+                  min={2}
+                  max={40}
+                  value={p.rows}
+                  aria-label="Ruudukon korkeus"
+                  onChange={(e) => setRows(Number(e.target.value))}
+                />
+              </label>
+            </div>
+            <button role="menuitem" onClick={() => { setMoreOpen(false); mutate((pr) => addRow(pr, pr.rows)); }}>
+              Lisää rivi
+            </button>
+            <button role="menuitem" onClick={() => { setMoreOpen(false); mutate((pr) => addCol(pr, pr.cols)); }}>
+              Lisää sarake
+            </button>
+          </div>
+        )}
       </div>
 
       <DonateToolbarButton />
@@ -190,7 +262,7 @@ export default function Toolbar() {
           aria-expanded={exportOpen}
           onClick={() => setExportOpen((v) => !v)}
         >
-          Vie / tulosta ▾
+          <Label full="Vie / tulosta ▾" short="Vie ▾" />
         </button>
         {exportOpen && (
           <div className="export-menu" role="menu">
@@ -200,14 +272,7 @@ export default function Toolbar() {
             <button role="menuitem" onClick={() => openExport('svg')}>SVG-kuva</button>
             <button role="menuitem" onClick={() => openExport('print')}>Tulosta</button>
             <hr />
-            <button
-              role="menuitem"
-              onClick={() => {
-                setExportOpen(false);
-                exportProjectFile(p);
-                toast('Projektitiedosto ladattu');
-              }}
-            >
+            <button role="menuitem" onClick={() => { setExportOpen(false); saveProjectFile(); }}>
               Tallenna projektitiedosto
             </button>
           </div>
