@@ -5,6 +5,8 @@ import { parseWordList, rowsToEntries, ParsedRow } from '../../logic/importer';
 import { generateLayout } from '../../logic/grid';
 import { buildSvg, exportPng, exportProjectFile, exportSvg, parseProjectFile } from '../../logic/exporter';
 import { requestPrint } from '../PrintSheet';
+import { DonateBlock, DonateModal } from '../Donate';
+import { maybePromptAfterExport } from '../../config/donate';
 import { suggestWords } from '../../logic/ai';
 import { findSlot } from '../../logic/grid';
 import { placeWord } from '../../logic/grid';
@@ -84,6 +86,7 @@ export default function Modals() {
       {modal?.kind === 'import' && <ImportModal />}
       {modal?.kind === 'autofill' && <AutofillModal />}
       {modal?.kind === 'export' && <ExportModal />}
+      {modal?.kind === 'donate' && <DonateModal />}
       {modal?.kind === 'confirm' && <ConfirmModal />}
     </>
   );
@@ -600,9 +603,11 @@ function ExportModal() {
     if (format === 'png') {
       await exportPng(p, { ...opts, showSolution: showKeyPreview }, quality === 'korkea' ? 3 : 2);
       toast('PNG-kuva ladattu');
+      maybePromptAfterExport();
     } else if (format === 'svg') {
       exportSvg(p, { ...opts, showSolution: showKeyPreview });
       toast('SVG-kuva ladattu');
+      maybePromptAfterExport();
     } else {
       requestPrint({
         includeAnswers: includeKey,
@@ -616,6 +621,7 @@ function ExportModal() {
         pageNumbers: pageNumber,
       });
       close();
+      maybePromptAfterExport();
       return;
     }
   };
@@ -686,6 +692,7 @@ function ExportModal() {
           <div className="subtle center">{showKeyPreview ? 'Ratkaisunäkymä' : 'Ratkojan näkymä'}</div>
         </div>
       </div>
+      <DonateBlock />
       <div className="modal-actions">
         <button className="panel-btn" onClick={close}>
           Peruuta

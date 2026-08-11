@@ -3,6 +3,7 @@ import { useStore } from '../state/store';
 import { addCol, addRow, resizeGrid } from '../logic/grid';
 import { validateProject } from '../logic/validate';
 import { exportProjectFile } from '../logic/exporter';
+import { DonateToolbarButton } from './Donate';
 
 const SAVE_LABELS: Record<string, string> = {
   saving: 'Tallennetaan…',
@@ -179,6 +180,8 @@ export default function Toolbar() {
           Tarkista ristikko
         </button>
       </div>
+
+      <DonateToolbarButton />
 
       <div className="toolbar-group export-wrap" ref={exportRef}>
         <button

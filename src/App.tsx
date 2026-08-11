@@ -9,6 +9,7 @@ import Modals from './components/modals/Modals';
 import ContextMenu from './components/ContextMenu';
 import PrintSheet from './components/PrintSheet';
 import { ensureWordlist } from './logic/ai';
+import { DonateBar } from './components/Donate';
 
 function useIsDesktop(): boolean {
   const [ok, setOk] = useState(() => window.innerWidth >= 1024);
@@ -86,6 +87,7 @@ export default function App() {
           {state.ui.toast}
         </div>
       )}
+      <DonateBar />
       <PrintSheet />
     </div>
   );

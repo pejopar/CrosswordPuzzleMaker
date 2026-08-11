@@ -78,6 +78,23 @@ src/
 Tekoälylogiikka (`src/logic/ai.ts`) on eriytetty editorista ja viennistä, joten mock-funktiot
 voi korvata oikeilla API-kutsuilla muuttamatta muuta sovellusta.
 
+## Lahjoituspainike (paikanvaraus)
+
+Lahjoituskehotukset on koottu tiedostoon `src/config/donate.ts`. Lisää maksupalvelun
+osoite (esim. Stripe Payment Link, Buy Me a Coffee, Ko-fi tai MobilePay)
+`DONATE_URL`-vakioon ennen julkaisua – kun se on tyhjä, painikkeet näyttävät
+paikanvarausviestin. Sovellus ei kerää maksutietoja itse, vaan avaa
+palveluntarjoajan sivun uuteen välilehteen.
+
+Kehotuksia on kolme, kaikki hillittyjä:
+
+1. **Vientimodaali** – kortti juuri ennen vientipainikkeita, näkyy kun käyttäjä saa
+   valmiin ristikon.
+2. **Työkalupalkin sydänpainike** – aina saatavilla, ei koskaan keskeytä työtä.
+3. **Alapalkki** – nousee näkyviin vasta kolmannen viennin jälkeen ja sen jälkeen
+   kymmenen viennin välein. Ei peitä kanvasta, ja "Älä näytä uudelleen" hiljentää
+   sen pysyvästi (localStorage).
+
 ## Tyylit ja teemat
 
 Tyyli-paneelissa on kuusi valmista teemaa (Pop, Klassikko, Retro, Neon, Luonto,

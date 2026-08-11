@@ -28,6 +28,7 @@ export type ModalKind =
   | { kind: 'import' }
   | { kind: 'autofill' }
   | { kind: 'export' }
+  | { kind: 'donate' }
   | {
       kind: 'confirm';
       title: string;

@@ -1689,6 +1689,120 @@ textarea:focus-visible,
   display: block;
 }
 
+/* ---------- Lahjoitus ---------- */
+
+.donate-tb {
+  color: var(--danger);
+  font-size: 16px;
+  line-height: 1;
+  padding: 6px 11px;
+}
+
+.donate-tb:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.donate-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 2px dashed var(--ink);
+  border-radius: var(--radius);
+  background: #fffbe8;
+}
+
+.donate-block-text {
+  flex: 1;
+}
+
+.donate-block-text strong {
+  display: block;
+  font-size: 13.5px;
+}
+
+.donate-block-text p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.donate-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.donate-tiers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.donate-tier {
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+
+.donate-tier:hover {
+  transform: translateY(-1px);
+  background: var(--accent);
+  box-shadow: 3px 3px 0 rgba(23, 21, 26, 0.2);
+}
+
+.donate-amount {
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.donate-label {
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.donate-note {
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: left;
+}
+
+.donate-bar {
+  position: fixed;
+  right: 18px;
+  bottom: 48px;
+  max-width: 560px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 5px 5px 0 rgba(255, 212, 0, 0.9);
+  padding: 10px 12px;
+  z-index: 110;
+  animation: toast-in 0.22s ease;
+}
+
+.donate-bar-text {
+  font-size: 12.5px;
+  flex: 1;
+}
+
+.subtle-btn {
+  border-color: #b9b2a6;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 /* ---------- Toast ---------- */
 
 .toast {
