@@ -8,6 +8,7 @@ export interface DictWord {
 }
 
 let buckets: Map<number, DictWord[]> | null = null;
+let wordSet: Set<string> | null = null;
 let loading: Promise<void> | null = null;
 
 function decode(concat: string, len: number): string[] {
@@ -49,10 +50,18 @@ export function ensureWordlist(): Promise<void> {
         for (const word of decode(concat, len)) list.push({ word, common: 32 });
         map.set(len, list);
       }
+      const set = new Set<string>();
+      for (const list of map.values()) for (const dw of list) set.add(dw.word);
       buckets = map;
+      wordSet = set;
     });
   }
   return loading;
+}
+
+/** Onko sana sanastossa? (false myös silloin, kun sanasto ei ole vielä latautunut) */
+export function hasWord(word: string): boolean {
+  return wordSet?.has(word.toUpperCase()) ?? false;
 }
 
 /**

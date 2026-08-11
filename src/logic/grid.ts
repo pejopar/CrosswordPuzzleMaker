@@ -309,6 +309,28 @@ export function autoPlaceEntries(p: Project, entryIds: string[]): { project: Pro
             // Ensimmäinen sana ruudukon keskelle
             score = -(Math.abs(midR - cur.rows / 2) + Math.abs(midC - cur.cols / 2));
           } else {
+            // Sivukosketukset ilman risteystä synnyttäisivät tahattomia
+            // kirjainjonoja viereisiin ruutuihin – sakotetaan niistä reippaasti
+            let sideContacts = 0;
+            for (let i = 0; i < word.length; i++) {
+              const rr = dir === 'down' ? r + i : r;
+              const cc = dir === 'across' ? c + i : c;
+              if (cellAt(cur, rr, cc)?.letter) continue; // risteys, ei sakkoa
+              const perp =
+                dir === 'across'
+                  ? [
+                      [rr - 1, cc],
+                      [rr + 1, cc],
+                    ]
+                  : [
+                      [rr, cc - 1],
+                      [rr, cc + 1],
+                    ];
+              for (const [pr2, pc2] of perp) {
+                const nb = cellAt(cur, pr2, pc2);
+                if (nb?.type === 'letter' && nb.letter) sideContacts++;
+              }
+            }
             // Suosi risteyksiä, pysy lähellä painopistettä ja kasvata
             // rajauslaatikkoa mahdollisimman vähän
             const growth =
@@ -316,7 +338,7 @@ export function autoPlaceEntries(p: Project, entryIds: string[]): { project: Pro
                 (Math.max(maxC, endC) - Math.min(minC, c) + 1) -
               boxArea;
             const dist = Math.abs(midR - centR) + Math.abs(midC - centC);
-            score = fit * 20 - dist * 2 - growth * 0.6;
+            score = fit * 20 - dist * 2 - growth * 0.6 - sideContacts * 9;
           }
           if (!best || score > best.score) best = { r, c, dir, score };
         }

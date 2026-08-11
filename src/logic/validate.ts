@@ -1,5 +1,6 @@
 import { Issue, Project } from '../model/types';
 import { placementCells, inBounds } from './grid';
+import { hasWord, isWordlistReady } from './wordlist';
 
 export function validateProject(p: Project): Issue[] {
   const issues: Issue[] = [];
@@ -122,6 +123,65 @@ export function validateProject(p: Project): Issue[] {
       if (p.cells[r][c].type === 'letter' && !p.cells[r][c].letter) emptyLetters++;
   if (emptyLetters > 0) {
     issues.push({ severity: 'ehdotus', message: `${emptyLetters} kirjainruutua on vielä ilman ratkaisukirjainta` });
+  }
+
+  // Tahattomat kirjainjonot: jokainen valmis kirjainrivi/-sarake, jota mikään
+  // sijoitus ei kata sellaisenaan, tarkistetaan sanastoa vasten
+  {
+    const spans = new Set(p.placements.map((pl) => `${pl.r},${pl.c},${pl.dir},${pl.length}`));
+    const answers = new Set(p.entries.map((e) => e.answer.toUpperCase()));
+    const runIssues: Issue[] = [];
+    const scanRun = (cells: { r: number; c: number }[], dir: 'across' | 'down') => {
+      if (cells.length < 2) return;
+      const letters = cells.map((pc) => p.cells[pc.r][pc.c].letter);
+      if (letters.some((ch) => !ch)) return; // keskeneräiset jonot ohitetaan
+      const word = letters.join('');
+      const start = cells[0];
+      if (spans.has(`${start.r},${start.c},${dir},${cells.length}`)) return;
+      const place = dir === 'across' ? `rivi ${start.r + 1}` : `sarake ${start.c + 1}`;
+      if (answers.has(word) || (isWordlistReady() && hasWord(word))) {
+        runIssues.push({
+          severity: 'ehdotus',
+          message: `Ruudukkoon muodostuu sana ${word} (${place}) ilman omaa vihjettä`,
+          target: start,
+        });
+      } else {
+        runIssues.push({
+          severity: 'varoitus',
+          message: `Tahaton kirjainjono ${word} (${place}) ei ole tunnettu sana`,
+          target: start,
+        });
+      }
+    };
+    for (let r = 0; r < p.rows; r++) {
+      let run: { r: number; c: number }[] = [];
+      for (let c = 0; c <= p.cols; c++) {
+        if (c < p.cols && p.cells[r][c].type === 'letter') run.push({ r, c });
+        else {
+          scanRun(run, 'across');
+          run = [];
+        }
+      }
+    }
+    for (let c = 0; c < p.cols; c++) {
+      let run: { r: number; c: number }[] = [];
+      for (let r = 0; r <= p.rows; r++) {
+        if (r < p.rows && p.cells[r][c].type === 'letter') run.push({ r, c });
+        else {
+          scanRun(run, 'down');
+          run = [];
+        }
+      }
+    }
+    // Rajataan tulva: näytetään enintään 12 ja kooste lopuista
+    if (runIssues.length > 12) {
+      issues.push(...runIssues.slice(0, 12), {
+        severity: 'varoitus',
+        message: `…ja ${runIssues.length - 12} muuta tahatonta kirjainjonoa – harkitse estoruutuja sanojen väliin`,
+      });
+    } else {
+      issues.push(...runIssues);
+    }
   }
 
   // Otsikko
