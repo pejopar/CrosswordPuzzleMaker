@@ -10,6 +10,7 @@ import ContextMenu from './components/ContextMenu';
 import PrintSheet from './components/PrintSheet';
 import { ensureWordlist } from './logic/ai';
 import { DonateBar } from './components/Donate';
+import SaveReminder from './components/SaveReminder';
 
 function useIsDesktop(): boolean {
   const [ok, setOk] = useState(() => window.innerWidth >= 1024);
@@ -88,6 +89,7 @@ export default function App() {
         </div>
       )}
       <DonateBar />
+      <SaveReminder />
       <PrintSheet />
     </div>
   );

@@ -249,6 +249,10 @@ export default function Toolbar() {
             <button role="menuitem" onClick={() => { setMoreOpen(false); mutate((pr) => addCol(pr, pr.cols)); }}>
               Lisää sarake
             </button>
+            <hr />
+            <button role="menuitem" onClick={() => { setMoreOpen(false); ui({ modal: { kind: 'about' } }); }}>
+              Tietoja ja lähteet
+            </button>
           </div>
         )}
       </div>

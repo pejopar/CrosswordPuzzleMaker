@@ -29,6 +29,7 @@ export type ModalKind =
   | { kind: 'autofill' }
   | { kind: 'export' }
   | { kind: 'donate' }
+  | { kind: 'about' }
   | {
       kind: 'confirm';
       title: string;
@@ -201,6 +202,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const saveTimer = useRef<number | null>(null);
   const toastTimer = useRef<number | null>(null);
+  const quotaWarned = useRef(false);
 
   // Automaattinen paikallinen tallennus
   useEffect(() => {
@@ -210,8 +212,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state.project));
         dispatch({ type: 'ui', patch: { saveStatus: 'saved' } });
+        quotaWarned.current = false;
       } catch {
+        // Yleisin syy on tallennustilan loppuminen (kuvat vievät tilaa).
+        // Kerrotaan kerran selvästi, mitä käyttäjä voi tehdä.
         dispatch({ type: 'ui', patch: { saveStatus: 'error' } });
+        if (!quotaWarned.current) {
+          quotaWarned.current = true;
+          dispatch({
+            type: 'ui',
+            patch: {
+              toast:
+                'Selaimen tallennustila täyttyi – lataa projekti tiedostoksi talteen ja poista turhia kuvia.',
+            },
+          });
+        }
       }
     }, 700);
     return () => {

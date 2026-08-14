@@ -7,6 +7,13 @@
 
 export const DONATE_URL = '';
 
+/**
+ * PAIKANVARAUS: QR-koodikuva (esim. MobilePay- tai Stripe-koodi).
+ * Aseta polku julkiseen tiedostoon, esim. '/lahjoita-qr.png', tai jätä
+ * tyhjäksi – silloin modaalissa näkyy paikanvarauslaatikko.
+ */
+export const DONATE_QR_IMAGE = '';
+
 export const DONATE_TIERS = [
   { amount: '3 €', label: 'Kahvi', note: 'Pieni kiitos työkalusta' },
   { amount: '10 €', label: 'Tukija', note: 'Auttaa kehitystä eteenpäin' },
@@ -21,7 +28,28 @@ export const DONATE_TEXT = {
     'ja rahoittaa uusia ominaisuuksia, kuten laajempaa sanastoa ja parempaa tekoälyapua.',
   cta: 'Tue kehitystä',
   placeholder: 'Lahjoituslinkki lisätään ennen julkaisua (DONATE_URL, src/config/donate.ts)',
+  qrPlaceholder: 'QR-koodi tulee tähän',
+  qrHelp: 'Lue koodi puhelimella niin pääset maksusivulle.',
 };
+
+/**
+ * Puhekuplan tekstit. Kupla ilmestyy sydänpainikkeesta harvakseltaan ja
+ * vaihtaa tekstiä joka kerta – sävy on kevyt, ei vaativa.
+ */
+export const BUBBLE_TEXTS = [
+  'Syntyykö ristikko mukavasti? ♥',
+  'Ristikkostudio on ilmainen – kiitos että kokeilet!',
+  'Pidätkö työkalusta? Kahvi kelpaisi ☕',
+  'Tuella pysyy mainoksettomana.',
+  'Uusia ominaisuuksia tulossa – tuki auttaa.',
+  'Ei pakko, mutta ilahduttaisi ♥',
+  'Kiva kun teet ristikoita täällä!',
+];
+
+/** Kuinka usein puhekupla voi ilmestyä. */
+export const BUBBLE_INTERVAL_MS = 5 * 60 * 1000;
+/** Kuinka kauan kupla näkyy ennen automaattista sulkeutumista. */
+export const BUBBLE_VISIBLE_MS = 12 * 1000;
 
 const COUNT_KEY = 'ristikkostudio.exportCount.v1';
 const DISMISS_KEY = 'ristikkostudio.donateDismissed.v1';

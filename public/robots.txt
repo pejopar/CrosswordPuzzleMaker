@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ristikkostudio.fi/sitemap.xml

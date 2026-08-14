@@ -1,0 +1,16 @@
+Ristikkostudion itse isännöidyt kirjasimet
+==========================================
+
+Kaikki kirjasimet ovat avoimen lähdekoodin kirjasimia, jotka on ladattu
+Google Fontsista ja jaettu tässä sovelluksessa niiden omien lisenssien
+mukaisesti. Kirjasintiedostoja ei ole muokattu.
+
+SIL Open Font License 1.1 (https://scripts.sil.org/OFL)
+  - Archivo            © The Archivo Project Authors
+  - Archivo Black      © The Archivo Black Project Authors
+  - Playfair Display   © The Playfair Display Project Authors
+  - Quicksand          © The Quicksand Project Authors
+  - Space Mono         © The Space Mono Project Authors
+
+Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+  - Roboto Slab        © The Roboto Slab Project Authors

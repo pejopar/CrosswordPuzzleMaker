@@ -11,6 +11,8 @@ export interface ExportOptions {
   bleed?: boolean;
   cropMarks?: boolean;
   pageNumber?: number;
+  /** Läpinäkyvä tausta (PNG/SVG) – kätevä Canvaan, Wordiin ja PowerPointiin */
+  transparent?: boolean;
 }
 
 const CELL = 48;
@@ -138,7 +140,9 @@ export function buildSvg(p: Project, opts: ExportOptions): string {
   parts.push(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${fontFamily(p.style.font)}">`
   );
-  parts.push(`<rect width="${W}" height="${H}" fill="#FFFDF7"/>`);
+  if (!opts.transparent) {
+    parts.push(`<rect width="${W}" height="${H}" fill="#FFFDF7"/>`);
+  }
   if (p.style.blockedStyle === 'hatch') {
     parts.push(
       `<defs><pattern id="hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">` +
@@ -317,6 +321,7 @@ export function exportSvg(p: Project, opts: ExportOptions) {
 }
 
 export async function exportPng(p: Project, opts: ExportOptions, scale = 2): Promise<void> {
+  // Läpinäkyvässä viennissä kangasta ei pohjusteta, jolloin alpha säilyy
   const svg = buildSvg(p, opts);
   const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   await new Promise<void>((resolve, reject) => {
@@ -327,9 +332,16 @@ export async function exportPng(p: Project, opts: ExportOptions, scale = 2): Pro
       canvas.height = img.height * scale;
       const ctx = canvas.getContext('2d')!;
       ctx.scale(scale, scale);
+      if (!opts.transparent) {
+        ctx.fillStyle = '#FFFDF7';
+        ctx.fillRect(0, 0, img.width, img.height);
+      }
       ctx.drawImage(img, 0, 0);
       canvas.toBlob((blob) => {
-        if (blob) download(`${p.name || 'ristikko'}.png`, blob);
+        if (blob) {
+          const suffix = opts.transparent ? '-lapinakyva' : '';
+          download(`${p.name || 'ristikko'}${suffix}.png`, blob);
+        }
         resolve();
       }, 'image/png');
     };
@@ -338,9 +350,16 @@ export async function exportPng(p: Project, opts: ExportOptions, scale = 2): Pro
   });
 }
 
+export const LAST_FILE_SAVE_KEY = 'ristikkostudio.lastFileSave.v1';
+
 export function exportProjectFile(p: Project) {
   const json = JSON.stringify({ app: 'ristikkostudio', version: 1, project: p }, null, 2);
   download(`${p.name || 'ristikko'}.ristikko.json`, new Blob([json], { type: 'application/json' }));
+  try {
+    localStorage.setItem(LAST_FILE_SAVE_KEY, String(Date.now()));
+  } catch {
+    // ei kriittinen
+  }
 }
 
 export function parseProjectFile(text: string): Project {

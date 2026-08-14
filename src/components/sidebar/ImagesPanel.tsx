@@ -3,6 +3,13 @@ import { useStore } from '../../state/store';
 import { uid } from '../../model/types';
 import { cloneProject } from '../../logic/grid';
 import { startDrag, clearDrag } from '../../state/dnd';
+import {
+  ACCEPTED_TYPES,
+  STORAGE_LIMIT,
+  estimateProjectBytes,
+  formatBytes,
+  processImageFile,
+} from '../../logic/images';
 
 export default function ImagesPanel() {
   const { state, mutate, toast } = useStore();
@@ -10,24 +17,33 @@ export default function ImagesPanel() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [editingAlt, setEditingAlt] = useState<string | null>(null);
 
-  const upload = (files: FileList | null) => {
+  const upload = async (files: FileList | null) => {
     if (!files) return;
     for (const file of Array.from(files)) {
       if (!/image\/(jpeg|png|webp|svg\+xml)/.test(file.type)) {
         toast(`Tiedostoa ${file.name} ei tueta (JPEG, PNG tai WebP)`);
         continue;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
+      try {
+        const res = await processImageFile(file);
         mutate((pr) => ({
           ...pr,
-          images: [...pr.images, { id: uid('img'), name: file.name, dataUrl, alt: file.name.replace(/\.\w+$/, '') }],
+          images: [
+            ...pr.images,
+            { id: uid('img'), name: res.name, dataUrl: res.dataUrl, alt: res.name.replace(/\.\w+$/, '') },
+          ],
         }));
-      };
-      reader.readAsDataURL(file);
+        if (res.resized) {
+          toast(`${res.name} pienennettiin tulostuskokoon (${formatBytes(res.bytes)})`);
+        }
+      } catch {
+        toast(`Kuvan ${file.name} käsittely epäonnistui`);
+      }
     }
   };
+
+  const usedBytes = estimateProjectBytes(p.images);
+  const nearLimit = usedBytes > STORAGE_LIMIT * 0.7;
 
   const recent = [...p.images].filter((i) => i.usedAt).sort((a, b) => (b.usedAt ?? 0) - (a.usedAt ?? 0)).slice(0, 4);
 
@@ -49,7 +65,7 @@ export default function ImagesPanel() {
         <input
           ref={fileRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept={ACCEPTED_TYPES}
           multiple
           style={{ display: 'none' }}
           onChange={(e) => upload(e.target.files)}
@@ -58,7 +74,19 @@ export default function ImagesPanel() {
 
       <div className="panel-hint subtle">
         Vedä kuva vihjealueelle liittääksesi sen – tai mihin tahansa vapaaseen ruutuun, jolloin
-        siihen luodaan uusi kuvavihjealue. Prototyypin mallikuvat ovat alkuperäisiä piirroskuvituksia.
+        siihen luodaan uusi kuvavihjealue.
+      </div>
+      <div className={`panel-hint ${nearLimit ? '' : 'subtle'}`}>
+        Isot valokuvat pienennetään automaattisesti tulostuskokoon (enintään 1400 px),
+        joten voit ladata myös kameran kuvia. Kuvat vievät nyt <strong>{formatBytes(usedBytes)}</strong>{' '}
+        selaimen {formatBytes(STORAGE_LIMIT)} tallennustilasta.
+        {nearLimit && (
+          <>
+            {' '}
+            <strong>Tila on vähissä</strong> – lataa projekti talteen tiedostoksi tai poista
+            käyttämättömiä kuvia.
+          </>
+        )}
       </div>
 
       {recent.length > 0 && (

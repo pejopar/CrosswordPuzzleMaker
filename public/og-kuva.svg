@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#FFFDF7"/>
+  <g fill="none" stroke="#17151a" stroke-width="4">
+    <rect x="700" y="150" width="330" height="330"/>
+    <path d="M810 150v330M920 150v330M700 260h330M700 370h330"/>
+  </g>
+  <rect x="700" y="150" width="110" height="110" fill="#FFD400"/>
+  <rect x="920" y="370" width="110" height="110" fill="#17151a"/>
+  <text x="745" y="228" font-family="Archivo, Arial, sans-serif" font-size="72" font-weight="800" fill="#17151a">R</text>
+  <text x="855" y="338" font-family="Archivo, Arial, sans-serif" font-size="72" font-weight="800" fill="#17151a">I</text>
+  <text x="745" y="448" font-family="Archivo, Arial, sans-serif" font-size="72" font-weight="800" fill="#17151a">S</text>
+  <rect x="110" y="240" width="470" height="76" fill="#FFD400"/>
+  <text x="128" y="298" font-family="Archivo Black, Arial Black, sans-serif" font-size="52" font-weight="900" fill="#17151a">RISTIKKOSTUDIO</text>
+  <text x="128" y="372" font-family="Archivo, Arial, sans-serif" font-size="27" fill="#17151a">Tee suomalainen kuvaristikko selaimessa</text>
+  <text x="128" y="414" font-family="Archivo, Arial, sans-serif" font-size="21" fill="#6d675e">Vihjeruudut · kuvavihjeet · sanaehdotukset · tulostusvalmis PDF</text>
+</svg>

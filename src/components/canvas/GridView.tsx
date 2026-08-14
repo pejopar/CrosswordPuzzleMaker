@@ -23,6 +23,7 @@ import {
 import { uid } from '../../model/types';
 import { dndState, dragActive, clearDrag } from '../../state/dnd';
 import { fontFamily } from '../../logic/fonts';
+import { ACCEPTED_TYPES, processImageFile } from '../../logic/images';
 import { blockedFill } from '../../model/themes';
 
 export interface GridViewProps {
@@ -856,24 +857,31 @@ export default function GridView({ project: p, mode, cellSize: S, interactive }:
               <input
                 id={`region-img-input-${rg.id}`}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                accept={ACCEPTED_TYPES}
                 style={{ display: 'none' }}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    const dataUrl = reader.result as string;
+                  try {
+                    const res = await processImageFile(file);
                     mutate((pr) => {
                       const n = cloneProject(pr);
                       const assetId = uid('img');
-                      n.images.push({ id: assetId, name: file.name, dataUrl, alt: file.name, usedAt: Date.now() });
+                      n.images.push({
+                        id: assetId,
+                        name: res.name,
+                        dataUrl: res.dataUrl,
+                        alt: res.name,
+                        usedAt: Date.now(),
+                      });
                       const reg = n.regions.find((r) => r.id === rg.id);
                       if (reg) reg.imageId = assetId;
                       return n;
                     });
-                  };
-                  reader.readAsDataURL(file);
+                    if (res.resized) toast(`${res.name} pienennettiin tulostuskokoon`);
+                  } catch {
+                    toast('Kuvan käsittely epäonnistui');
+                  }
                 }}
               />
             )}

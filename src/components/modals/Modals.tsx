@@ -87,6 +87,7 @@ export default function Modals() {
       {modal?.kind === 'autofill' && <AutofillModal />}
       {modal?.kind === 'export' && <ExportModal />}
       {modal?.kind === 'donate' && <DonateModal />}
+      {modal?.kind === 'about' && <AboutModal />}
       {modal?.kind === 'confirm' && <ConfirmModal />}
     </>
   );
@@ -570,9 +571,11 @@ function ExportModal() {
   const [bleed, setBleed] = useState(false);
   const [cropMarks, setCropMarks] = useState(false);
   const [pageNumber, setPageNumber] = useState(false);
+  const [transparent, setTransparent] = useState(false);
   const [quality, setQuality] = useState<'normaali' | 'korkea'>('korkea');
 
   const includeKey = format === 'pdf-key';
+  const isImage = format === 'png' || format === 'svg';
   const previewSvg = useMemo(
     () =>
       buildSvg(p, {
@@ -584,8 +587,9 @@ function ExportModal() {
         bleed,
         cropMarks,
         pageNumber: pageNumber ? 1 : undefined,
+        transparent: transparent && isImage,
       }),
-    [p, showKeyPreview, grayscale, includeTitle, includeIntro, includeAuthor, bleed, cropMarks, pageNumber]
+    [p, showKeyPreview, grayscale, includeTitle, includeIntro, includeAuthor, bleed, cropMarks, pageNumber, transparent, isImage]
   );
 
   const close = () => ui({ modal: null });
@@ -599,6 +603,7 @@ function ExportModal() {
       bleed,
       cropMarks,
       pageNumber: pageNumber ? 1 : undefined,
+      transparent: transparent && isImage,
     };
     if (format === 'png') {
       await exportPng(p, { ...opts, showSolution: showKeyPreview }, quality === 'korkea' ? 3 : 2);
@@ -667,6 +672,12 @@ function ExportModal() {
             <label className="field check"><input type="checkbox" checked={pageNumber} onChange={(e) => setPageNumber(e.target.checked)} /><span>Näytä sivunumero</span></label>
           </div>
 
+          {isImage && (
+            <label className="field check">
+              <input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} />
+              <span>Läpinäkyvä tausta (Canva, Word, PowerPoint)</span>
+            </label>
+          )}
           {format === 'png' && (
             <label className="field">
               <span>Kuvanlaatu</span>
@@ -699,6 +710,63 @@ function ExportModal() {
         </button>
         <button className="panel-btn primary" onClick={doExport}>
           {format === 'png' ? 'Lataa PNG' : format === 'svg' ? 'Lataa SVG' : 'Avaa tulostus / PDF'}
+        </button>
+      </div>
+    </ModalFrame>
+  );
+}
+
+/* ---------- Tietoja ja lähteet ---------- */
+
+function AboutModal() {
+  const { ui } = useStore();
+  const close = () => ui({ modal: null });
+  return (
+    <ModalFrame title="Tietoja ja lähteet" onClose={close}>
+      <p>
+        <strong>Ristikkostudio</strong> on selaimessa toimiva työkalu suomalaisten
+        kuvaristikoiden tekemiseen. Sovellus ei vaadi tiliä eikä lähetä ristikoitasi
+        mihinkään: kaikki tiedot pysyvät omassa selaimessasi, ja voit ladata projektin
+        tiedostoksi varmuuskopioksi.
+      </p>
+
+      <h3 className="panel-sub">Tietosuoja</h3>
+      <p className="subtle">
+        Sovellus ei käytä evästeitä, seurantaa eikä ulkoisia palveluita. Kirjasimet
+        toimitetaan omalta palvelimelta, joten selaimesi ei ota yhteyttä kolmansiin
+        osapuoliin. Ristikot tallennetaan selaimen paikalliseen muistiin (localStorage).
+      </p>
+
+      <h3 className="panel-sub">Sanasto</h3>
+      <p className="subtle">
+        Sanaehdotusten sanasto perustuu <strong>Kotimaisten kielten keskuksen
+        nykysuomen sanalistaan</strong>, joka on lisensoitu{' '}
+        <a href="https://creativecommons.org/licenses/by/4.0/deed.fi" target="_blank" rel="noopener noreferrer">
+          CC BY 4.0
+        </a>{' '}
+        -lisenssillä (
+        <a href="https://kaino.kotus.fi/sanat/nykysuomi/" target="_blank" rel="noopener noreferrer">
+          kaino.kotus.fi
+        </a>
+        ). Sanoja on suodatettu pituuden mukaan ja järjestetty Ristikkostudion omalla
+        tuttuusarviolla. Sanalistaa ei ole muokattu muilta osin.
+      </p>
+
+      <h3 className="panel-sub">Kirjasimet</h3>
+      <p className="subtle">
+        Archivo, Archivo Black, Playfair Display, Quicksand ja Space Mono: SIL Open Font
+        License 1.1. Roboto Slab: Apache License 2.0. Kirjasintiedostoja ei ole muokattu.
+      </p>
+
+      <h3 className="panel-sub">Kuvat</h3>
+      <p className="subtle">
+        Esimerkkiprojektin kuvitukset ovat Ristikkostudion omia piirroksia. Itse lisäämäsi
+        kuvat pysyvät omassa selaimessasi.
+      </p>
+
+      <div className="modal-actions">
+        <button className="panel-btn primary" onClick={close}>
+          Sulje
         </button>
       </div>
     </ModalFrame>

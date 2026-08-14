@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../state/store';
 import {
+  BUBBLE_INTERVAL_MS,
+  BUBBLE_TEXTS,
+  BUBBLE_VISIBLE_MS,
+  DONATE_QR_IMAGE,
   DONATE_TEXT,
   DONATE_TIERS,
   DONATE_URL,
   dismissDonatePrompt,
+  isDismissedForever,
   openDonatePage,
   subscribeDonatePrompt,
 } from '../config/donate';
@@ -37,18 +42,73 @@ export function DonateBlock() {
   );
 }
 
-/** Työkalupalkin sydänpainike – aina saatavilla, ei koskaan keskeytä työtä. */
+/**
+ * Työkalupalkin sydänpainike. Siitä kurkistaa silloin tällöin pieni
+ * ristikkohenkinen puhekupla – ei peitä mitään, katoaa itsestään ja
+ * vaikenee pysyvästi, jos käyttäjä on niin valinnut.
+ */
 export function DonateToolbarButton() {
   const { ui } = useStore();
+  const [bubble, setBubble] = useState<string | null>(null);
+  const shownRef = useRef(0);
+
+  useEffect(() => {
+    if (isDismissedForever()) return;
+    let hideTimer: number | undefined;
+    const show = () => {
+      if (isDismissedForever() || document.hidden) return;
+      // Ei kuplaa, jos käyttäjällä on modaali auki
+      if (document.querySelector('.modal-backdrop')) return;
+      const text = BUBBLE_TEXTS[shownRef.current % BUBBLE_TEXTS.length];
+      shownRef.current++;
+      setBubble(text);
+      hideTimer = window.setTimeout(() => setBubble(null), BUBBLE_VISIBLE_MS);
+    };
+    const timer = window.setInterval(show, BUBBLE_INTERVAL_MS);
+    return () => {
+      window.clearInterval(timer);
+      if (hideTimer) window.clearTimeout(hideTimer);
+    };
+  }, []);
+
   return (
-    <button
-      className="tb-btn donate-tb"
-      title={DONATE_TEXT.title}
-      aria-label={DONATE_TEXT.title}
-      onClick={() => ui({ modal: { kind: 'donate' } })}
-    >
-      ♥
-    </button>
+    <div className="donate-tb-wrap">
+      <button
+        className="tb-btn donate-tb"
+        title={DONATE_TEXT.title}
+        aria-label={DONATE_TEXT.title}
+        onClick={() => {
+          setBubble(null);
+          ui({ modal: { kind: 'donate' } });
+        }}
+      >
+        ♥
+      </button>
+      {bubble && (
+        <div className="donate-bubble" role="status">
+          <button
+            className="donate-bubble-body"
+            onClick={() => {
+              setBubble(null);
+              ui({ modal: { kind: 'donate' } });
+            }}
+          >
+            {bubble}
+          </button>
+          <button
+            className="donate-bubble-close"
+            aria-label="Sulje"
+            title="Sulje"
+            onClick={(e) => {
+              e.stopPropagation();
+              setBubble(null);
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -74,6 +134,16 @@ export function DonateModal() {
         </header>
         <div className="modal-body">
           <p>{DONATE_TEXT.long}</p>
+          <div className="donate-qr-row">
+            {DONATE_QR_IMAGE ? (
+              <img className="donate-qr" src={DONATE_QR_IMAGE} alt="Lahjoituksen QR-koodi" />
+            ) : (
+              <div className="donate-qr donate-qr-empty" aria-label={DONATE_TEXT.qrPlaceholder}>
+                <span>{DONATE_TEXT.qrPlaceholder}</span>
+              </div>
+            )}
+            <p className="donate-qr-help">{DONATE_TEXT.qrHelp}</p>
+          </div>
           <div className="donate-tiers">
             {DONATE_TIERS.map((t) => (
               <button
