@@ -1781,6 +1781,18 @@ textarea:focus-visible,
   background: #fffbe8;
 }
 
+.donate-block .donate-qr {
+  width: 84px;
+  height: 84px;
+}
+
+.donate-block-qr-hint {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 .donate-block-text {
   flex: 1;
 }
@@ -1805,7 +1817,9 @@ textarea:focus-visible,
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin: 14px 0;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
 }
 
 .donate-tier {
@@ -1817,13 +1831,6 @@ textarea:focus-visible,
   flex-direction: column;
   gap: 3px;
   align-items: flex-start;
-  transition: transform 0.06s ease, box-shadow 0.06s ease;
-}
-
-.donate-tier:hover {
-  transform: translateY(-1px);
-  background: var(--accent);
-  box-shadow: 3px 3px 0 rgba(23, 21, 26, 0.2);
 }
 
 .donate-amount {
@@ -1951,21 +1958,32 @@ textarea:focus-visible,
 
 /* QR-koodi lahjoitusmodaalissa */
 
-.donate-qr-row {
+.donate-qr-hero {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  margin: 14px 0;
+  gap: 6px;
+  margin: 16px 0 18px;
+  padding: 18px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  background: #fffbe8;
 }
 
 .donate-qr {
-  width: 118px;
-  height: 118px;
+  width: 108px;
+  height: 108px;
   border: 2px solid var(--ink);
   border-radius: var(--radius);
   object-fit: contain;
   background: #fff;
   flex-shrink: 0;
+  padding: 5px;
+}
+
+.donate-qr-large {
+  width: 188px;
+  height: 188px;
 }
 
 .donate-qr-empty {
@@ -1979,10 +1997,35 @@ textarea:focus-visible,
   padding: 8px;
 }
 
+.donate-qr-lead {
+  font-size: 14.5px;
+  margin-top: 4px;
+}
+
 .donate-qr-help {
   margin: 0;
   font-size: 12.5px;
   color: var(--muted);
+}
+
+.donate-amounts-note {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.link-btn:hover {
+  color: var(--ink);
 }
 
 /* ---------- Tallennusmuistutus ---------- */

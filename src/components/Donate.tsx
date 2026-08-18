@@ -14,18 +14,27 @@ import {
   subscribeDonatePrompt,
 } from '../config/donate';
 
-/** Yhteinen painike, joka avaa lahjoitussivun tai kertoo paikanvarauksesta. */
-function DonateAction({ className, label }: { className?: string; label?: string }) {
-  const { toast } = useStore();
+/**
+ * QR-koodi lahjoitusta varten. Jos kuvatiedostoa ei löydy, näytetään
+ * paikanvaraus rikkinäisen kuvakkeen sijaan.
+ */
+function DonateQr({ size = 'normal' }: { size?: 'normal' | 'large' }) {
+  const [failed, setFailed] = useState(false);
+  const cls = `donate-qr ${size === 'large' ? 'donate-qr-large' : ''}`;
+  if (!DONATE_QR_IMAGE || failed) {
+    return (
+      <div className={`${cls} donate-qr-empty`} aria-label={DONATE_TEXT.qrPlaceholder}>
+        <span>{DONATE_TEXT.qrPlaceholder}</span>
+      </div>
+    );
+  }
   return (
-    <button
-      className={className ?? 'panel-btn primary'}
-      onClick={() => {
-        if (!openDonatePage()) toast(DONATE_TEXT.placeholder);
-      }}
-    >
-      ♥ {label ?? DONATE_TEXT.cta}
-    </button>
+    <img
+      className={cls}
+      src={DONATE_QR_IMAGE}
+      alt="Lahjoituksen QR-koodi"
+      onError={() => setFailed(true)}
+    />
   );
 }
 
@@ -33,11 +42,12 @@ function DonateAction({ className, label }: { className?: string; label?: string
 export function DonateBlock() {
   return (
     <aside className="donate-block" aria-label={DONATE_TEXT.title}>
+      <DonateQr />
       <div className="donate-block-text">
         <strong>{DONATE_TEXT.title}</strong>
         <p>{DONATE_TEXT.short}</p>
+        <p className="donate-block-qr-hint">{DONATE_TEXT.qrHelp}</p>
       </div>
-      <DonateAction className="panel-btn donate-btn" />
     </aside>
   );
 }
@@ -134,37 +144,41 @@ export function DonateModal() {
         </header>
         <div className="modal-body">
           <p>{DONATE_TEXT.long}</p>
-          <div className="donate-qr-row">
-            {DONATE_QR_IMAGE ? (
-              <img className="donate-qr" src={DONATE_QR_IMAGE} alt="Lahjoituksen QR-koodi" />
-            ) : (
-              <div className="donate-qr donate-qr-empty" aria-label={DONATE_TEXT.qrPlaceholder}>
-                <span>{DONATE_TEXT.qrPlaceholder}</span>
-              </div>
-            )}
-            <p className="donate-qr-help">{DONATE_TEXT.qrHelp}</p>
+
+          <div className="donate-qr-hero">
+            <DonateQr size="large" />
+            <strong className="donate-qr-lead">{DONATE_TEXT.qrLead}</strong>
+            <span className="donate-qr-help">{DONATE_TEXT.qrHelp}</span>
           </div>
-          <div className="donate-tiers">
+
+          <p className="donate-amounts-note">{DONATE_TEXT.amountsNote}</p>
+          <ul className="donate-tiers" aria-label="Esimerkkisummia">
             {DONATE_TIERS.map((t) => (
+              <li key={t.amount} className="donate-tier">
+                <span className="donate-amount">{t.amount}</span>
+                <span className="donate-label">{t.label}</span>
+                <span className="donate-note">{t.note}</span>
+              </li>
+            ))}
+          </ul>
+
+          {DONATE_URL && (
+            <p className="center">
               <button
-                key={t.amount}
-                className="donate-tier"
+                className="link-btn"
                 onClick={() => {
                   if (!openDonatePage()) toast(DONATE_TEXT.placeholder);
                 }}
               >
-                <span className="donate-amount">{t.amount}</span>
-                <span className="donate-label">{t.label}</span>
-                <span className="donate-note">{t.note}</span>
+                {DONATE_TEXT.desktopFallback}
               </button>
-            ))}
-          </div>
-          {!DONATE_URL && <p className="subtle">{DONATE_TEXT.placeholder}</p>}
+            </p>
+          )}
+
           <div className="modal-actions">
-            <button className="panel-btn" onClick={close}>
-              Ehkä myöhemmin
+            <button className="panel-btn primary" onClick={close}>
+              Sulje
             </button>
-            <DonateAction />
           </div>
         </div>
       </div>

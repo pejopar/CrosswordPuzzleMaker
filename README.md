@@ -96,8 +96,10 @@ muuttujia tai reitityssääntöjä ei tarvita.
 
 Ennen julkaisua:
 
-1. Lisää maksupalvelun osoite `DONATE_URL`-vakioon ja QR-koodikuva
-   `DONATE_QR_IMAGE`-vakioon (`src/config/donate.ts`).
+1. Lisää lahjoitus-QR tiedostoksi `public/lahjoita-qr.png` (polku on määritelty
+   `DONATE_QR_IMAGE`-vakiossa, `src/config/donate.ts`). Ilman tiedostoa modaalissa
+   näkyy paikanvarauslaatikko. `DONATE_URL` on valinnainen varalinkki
+   työpöytäkäyttäjille, jotka eivät voi lukea koodia ruudulta.
 2. Vaihda `index.html`:n `canonical`- ja `og:*`-osoitteet oikeaan verkkotunnukseen
    (nyt `https://ristikkostudio.fi/`), samoin `public/sitemap.xml` ja
    `public/robots.txt`.
@@ -125,7 +127,11 @@ Kehotuksia on neljä, kaikki hillittyjä:
    kymmenen viennin välein. Ei peitä kanvasta.
 
 "Älä näytä uudelleen" hiljentää sekä alapalkin että puhekuplan pysyvästi
-(localStorage). QR-koodille on paikanvaraus lahjoitusmodaalissa.
+(localStorage).
+
+Lahjoitus tapahtuu QR-koodilla, jonka käyttäjä lukee puhelimellaan ja jossa hän
+valitsee summan itse. Modaalissa näytettävät summat (1 € / 5 € / 20 €) ovat siksi
+pelkkiä rohkaisevia esimerkkejä – eivät klikattavia valintoja.
 
 ## Tyylit ja teemat
 

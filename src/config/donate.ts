@@ -1,23 +1,29 @@
 // Lahjoitusasetukset.
 //
-// PAIKANVARAUS: lisää maksupalvelun osoite (esim. Stripe Payment Link,
-// Buy Me a Coffee, Ko-fi tai MobilePay) DONATE_URL-vakioon ennen julkaisua.
-// Sovellus ei kerää maksutietoja itse, vaan ohjaa käyttäjän palveluntarjoajalle.
-// Kun osoite on tyhjä, painikkeet näyttävät paikanvarausviestin.
+// Lahjoitus tapahtuu QR-koodilla: käyttäjä lukee koodin puhelimellaan ja
+// valitsee summan itse maksupalvelussa. Sovellus ei kerää maksutietoja.
 
+/**
+ * Lahjoitus-QR. Tiedosto on hakemistossa `public/`, joten polku alkaa
+ * juuresta. Jos tiedostoa ei löydy, modaalissa näkyy paikanvarauslaatikko
+ * rikkinäisen kuvan sijaan.
+ */
+export const DONATE_QR_IMAGE = '/lahjoita-qr.png';
+
+/**
+ * Valinnainen varalinkki työpöytäkäyttäjille, jotka eivät voi lukea koodia
+ * ruudulta (esim. sama laite). Tyhjänä linkkiä ei näytetä lainkaan.
+ */
 export const DONATE_URL = '';
 
 /**
- * PAIKANVARAUS: QR-koodikuva (esim. MobilePay- tai Stripe-koodi).
- * Aseta polku julkiseen tiedostoon, esim. '/lahjoita-qr.png', tai jätä
- * tyhjäksi – silloin modaalissa näkyy paikanvarauslaatikko.
+ * Summat ovat pelkkiä ehdotuksia – QR-koodilla voi antaa minkä tahansa
+ * summan. Nämä näytetään rohkaisuna, eivät valintoina.
  */
-export const DONATE_QR_IMAGE = '';
-
 export const DONATE_TIERS = [
-  { amount: '3 €', label: 'Kahvi', note: 'Pieni kiitos työkalusta' },
-  { amount: '10 €', label: 'Tukija', note: 'Auttaa kehitystä eteenpäin' },
-  { amount: '25 €', label: 'Kummi', note: 'Mahdollistaa uudet ominaisuudet' },
+  { amount: '1 €', label: 'Kiitos', note: 'Pienikin summa lämmittää' },
+  { amount: '5 €', label: 'Kahvi', note: 'Kiitos työkalusta' },
+  { amount: '20 €', label: 'Tukija', note: 'Vie kehitystä eteenpäin' },
 ];
 
 export const DONATE_TEXT = {
@@ -27,9 +33,12 @@ export const DONATE_TEXT = {
     'Ristikkostudio on ilmainen ja mainokseton. Lahjoitus auttaa pitämään sen sellaisena ' +
     'ja rahoittaa uusia ominaisuuksia, kuten laajempaa sanastoa ja parempaa tekoälyapua.',
   cta: 'Tue kehitystä',
-  placeholder: 'Lahjoituslinkki lisätään ennen julkaisua (DONATE_URL, src/config/donate.ts)',
+  placeholder: 'Lahjoitus-QR lisätään ennen julkaisua (public/lahjoita-qr.png)',
   qrPlaceholder: 'QR-koodi tulee tähän',
-  qrHelp: 'Lue koodi puhelimella niin pääset maksusivulle.',
+  qrHelp: 'Lue koodi puhelimen kameralla.',
+  qrLead: 'Lue QR-koodi puhelimellasi',
+  amountsNote: 'Voit valita summan itse – mikä tahansa käy. Esimerkiksi:',
+  desktopFallback: 'Etkö voi lukea koodia? Avaa maksusivu selaimessa',
 };
 
 /**
